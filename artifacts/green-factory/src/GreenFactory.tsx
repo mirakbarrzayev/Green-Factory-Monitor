@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import loginBg from "@assets/Gemini_Generated_Image_akyv1makyv1makyv_(1)_1778779629706.png";
-import dashBg from "@assets/Gemini_Generated_Image_6l2e9t6l2e9t6l2e_1778779580421.png";
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const generateSensorData = () => ({
@@ -242,53 +240,60 @@ const gfStyles = `
 
   /* ONBOARDING */
   .onboard-wrap {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr;
     position: relative; overflow: hidden;
-    background-size: cover; background-position: center; background-repeat: no-repeat;
   }
-  .onboard-overlay {
-    position: absolute; inset: 0; z-index: 1;
-    background: rgba(2,8,5,0.15);
+  .onboard-left {
+    background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    padding: 60px; position: relative; z-index: 1; border-right: 1px solid var(--border);
   }
-  .onboard-card {
-    position: relative; z-index: 2;
-    width: 100%; max-width: 460px; margin: 24px;
-    background: rgba(6,16,11,0.82);
-    backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(0,232,122,0.22);
-    border-radius: 24px; padding: 44px 40px;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,232,122,0.04), inset 0 1px 0 rgba(0,232,122,0.10);
-  }
-  .onboard-card-header { text-align: center; margin-bottom: 28px; }
-  .onboard-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+  .onboard-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 56px; }
   .onboard-logo-icon {
-    width: 44px; height: 44px; background: linear-gradient(135deg, var(--green), var(--teal));
+    width: 48px; height: 48px; background: linear-gradient(135deg, var(--green), var(--teal));
     border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    color: var(--bg); box-shadow: 0 0 24px rgba(0,232,122,0.5);
+    color: var(--bg); box-shadow: 0 0 24px rgba(0,232,122,0.4);
   }
-  .onboard-logo span { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .onboard-logo span { font-family: var(--font-head); font-size: 20px; font-weight: 800; color: var(--text); }
   .onboard-logo span em { color: var(--green); font-style: normal; }
-  .onboard-lock-wrap {
-    width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 12px;
-    background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.25);
-    display: flex; align-items: center; justify-content: center; color: var(--green);
-    box-shadow: 0 0 20px rgba(0,232,122,0.2);
+  .onboard-headline {
+    font-family: var(--font-head); font-size: 52px; font-weight: 800; line-height: 1.05;
+    color: var(--text); margin-bottom: 24px; letter-spacing: -1.5px;
   }
-  .onboard-card-title { font-family: var(--font-head); font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .onboard-card-sub { font-size: 13px; color: var(--text3); }
-  .auth-box { width: 100%; }
+  .onboard-headline span { color: var(--green); }
+  .onboard-sub { font-size: 17px; color: var(--text2); line-height: 1.7; max-width: 400px; margin-bottom: 48px; font-weight: 300; }
+  .feature-list { display: flex; flex-direction: column; gap: 16px; }
+  .feature-item { display: flex; align-items: center; gap: 14px; }
+  .feature-dot {
+    width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,232,122,0.1); border: 1px solid rgba(0,232,122,0.2); color: var(--green); flex-shrink: 0;
+  }
+  .feature-item span { font-size: 14px; color: var(--text2); font-weight: 400; }
+  .onboard-bg-circle {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,232,122,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* RIGHT PANEL */
+  .onboard-right {
+    background: var(--bg); display: flex; flex-direction: column;
+    justify-content: center; align-items: center; padding: 60px 48px;
+    position: relative; z-index: 1;
+  }
+  .auth-box { width: 100%; max-width: 420px; }
   .tab-switcher {
-    display: flex; gap: 4px; background: rgba(0,0,0,0.35); border-radius: 10px;
-    padding: 4px; margin-bottom: 28px; border: 1px solid rgba(0,232,122,0.14);
+    display: flex; gap: 4px; background: var(--bg2); border-radius: 10px;
+    padding: 4px; margin-bottom: 32px; border: 1px solid var(--border);
   }
   .tab-btn {
-    flex: 1; padding: 9px; border: none; border-radius: 7px; cursor: pointer;
+    flex: 1; padding: 10px; border: none; border-radius: 7px; cursor: pointer;
     font-family: var(--font-body); font-size: 14px; font-weight: 500; transition: all 0.2s;
     background: transparent; color: var(--text2);
   }
   .tab-btn.active { background: var(--green); color: var(--bg); font-weight: 600; }
-  .auth-title { font-family: var(--font-head); font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+  .auth-title { font-family: var(--font-head); font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .auth-sub { font-size: 14px; color: var(--text2); margin-bottom: 28px; }
 
   /* FORM */
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -329,10 +334,9 @@ const gfStyles = `
   .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
   /* DASHBOARD */
-  .dash-layout { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; background-size: cover; background-position: center; background-repeat: no-repeat; }
+  .dash-layout { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; }
   .sidebar {
-    background: rgba(4,12,8,0.90); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    border-right: 1px solid rgba(0,232,122,0.13);
+    background: var(--bg2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; padding: 28px 0; position: sticky; top: 0; height: 100vh;
   }
   .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 24px 32px; }
@@ -373,7 +377,7 @@ const gfStyles = `
   .logout-btn:hover { color: var(--red); }
 
   /* MAIN CONTENT */
-  .dash-main { background: rgba(3,9,6,0.55); backdrop-filter: blur(2px); padding: 32px; overflow-y: auto; }
+  .dash-main { background: var(--bg); padding: 32px; overflow-y: auto; }
   .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
   .dash-title { font-family: var(--font-head); font-size: 28px; font-weight: 800; color: var(--text); }
   .dash-title span { color: var(--green); }
@@ -388,9 +392,9 @@ const gfStyles = `
   /* KPI CARDS */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
   .kpi-card {
-    background: rgba(8,22,14,0.80); border: 1px solid rgba(0,232,122,0.14); border-radius: var(--r);
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
     padding: 20px; position: relative; overflow: hidden; transition: border-color 0.2s, transform 0.2s;
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(12px);
   }
   .kpi-card:hover { border-color: var(--border2); transform: translateY(-2px); }
   .kpi-card::before {
@@ -422,8 +426,8 @@ const gfStyles = `
   .section-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   .section-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   .panel {
-    background: rgba(8,22,14,0.78); border: 1px solid rgba(0,232,122,0.13); border-radius: var(--r); padding: 20px;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 20px;
+    backdrop-filter: blur(12px);
   }
   .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
   .panel-title { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--text); }
@@ -786,21 +790,37 @@ function AuthScreen({ onLogin }: { onLogin: (u: User) => void }) {
   };
 
   return (
-    <div className="onboard-wrap" style={{backgroundImage: `url(${loginBg})`}}>
+    <div className="onboard-wrap">
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      <div className="onboard-overlay"/>
-
-      <div className="onboard-card">
-        <div className="onboard-card-header">
-          <div className="onboard-logo">
-            <div className="onboard-logo-icon"><IconLeaf/></div>
-            <span>Green<em>Factory</em></span>
-          </div>
-          <div className="onboard-lock-wrap"><IconLock/></div>
-          <div className="onboard-card-title">Sistemə Giriş — Industrial Audit</div>
-          <div className="onboard-card-sub">Sənaye dayanıqlılıq monitorinq platforması</div>
+      <div className="onboard-left">
+        <div className="onboard-bg-circle" style={{width:500,height:500,top:-100,right:-100}}/>
+        <div className="onboard-bg-circle" style={{width:300,height:300,bottom:-50,left:-50}}/>
+        <div className="onboard-logo">
+          <div className="onboard-logo-icon"><IconLeaf/></div>
+          <span>Green<em>Factory</em></span>
         </div>
+        <h1 className="onboard-headline">
+          Daha Ağıllı.<br/>Daha <span>Yaşıl.</span><br/>Daha Güclü.
+        </h1>
+        <p className="onboard-sub">
+          Sənaye müəssisənizin enerji, su və karbon göstəricilərini real vaxt rejimində izləyin. Bərpa olunan enerji, nəqliyyat və qida tullantılarını idarə edin.
+        </p>
+        <div className="feature-list">
+          {[
+            [<IconZap/>, "Real-vaxt Enerji Monitorinqi"],
+            [<IconDroplets/>, "Su İstifadəsi Analizi"],
+            [<IconWind/>, "CO₂ Emissiya İzləmə"],
+            [<IconShield/>, "Kiber-Təhlükəsizlik Auditi"],
+          ].map(([icon, label], i) => (
+            <div className="feature-item" key={i}>
+              <div className="feature-dot">{icon}</div>
+              <span>{label as string}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
+      <div className="onboard-right">
         <div className="auth-box">
           <div className="tab-switcher">
             <button
@@ -1358,7 +1378,7 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
   const sections = [...new Set(navItems.map(n => n.section))];
 
   return (
-    <div className="dash-layout" style={{backgroundImage: `url(${dashBg})`, backgroundSize: "cover", backgroundPosition: "center"}}>
+    <div className="dash-layout">
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon"><IconLeaf/></div>
@@ -1394,7 +1414,7 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
         </div>
       </aside>
 
-      <main className="dash-main" style={{background: "rgba(2,6,4,0.20)"}}>
+      <main className="dash-main">
         {activePage === "overview" && (
           <div className="gf-page">
             <div className="dash-header">
