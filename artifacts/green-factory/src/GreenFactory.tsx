@@ -140,7 +140,7 @@ const IconInfo = () => (
   </svg>
 );
 const IconSun = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
     <circle cx="12" cy="12" r="5"/>
     <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
     <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
@@ -148,10 +148,22 @@ const IconSun = () => (
     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
   </svg>
 );
+const IconMoon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+const IconKey = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+    <circle cx="7.5" cy="15.5" r="5.5"/>
+    <path d="M21 2l-9.6 9.6"/>
+    <path d="M15.5 7.5l3 3L22 7l-3-3"/>
+  </svg>
+);
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 const gfStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -174,7 +186,7 @@ const gfStyles = `
     --text: #e8f5ee;
     --text2: #8aab98;
     --text3: #4d7a61;
-    --font-head: 'Syne', sans-serif;
+    --font-head: 'Inter', sans-serif;
     --font-body: 'DM Sans', sans-serif;
     --r: 12px;
     --r2: 8px;
@@ -182,7 +194,33 @@ const gfStyles = `
     --shadow2: 0 2px 12px rgba(0,0,0,0.4);
   }
 
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); }
+  /* LIGHT MODE */
+  .gf-root.gf-light {
+    --bg: #f0f7f4;
+    --bg2: #e2efe8;
+    --bg3: #d4e8db;
+    --card: #ffffff;
+    --card2: #f0f7f4;
+    --border: #b8d9c6;
+    --border2: #94c4ad;
+    --text: #0a1f14;
+    --text2: #2d5e42;
+    --text3: #5a8a70;
+    --shadow: 0 8px 32px rgba(0,180,90,0.10);
+    --shadow2: 0 2px 12px rgba(0,0,0,0.10);
+  }
+  .gf-root.gf-light body,
+  .gf-root.gf-light { background: var(--bg); color: var(--text); }
+  .gf-root.gf-light .sidebar { background: var(--bg2); }
+  .gf-root.gf-light .dash-main { background: var(--bg); }
+  .gf-root.gf-light .form-input { background: var(--card2); }
+  .gf-root.gf-light .calc-input { background: var(--card2); }
+  .gf-root.gf-light .settings-val { background: var(--card2); }
+  .gf-root.gf-light .user-card { background: var(--card2); }
+  .gf-root.gf-light .onboard-left { background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%); }
+  .gf-root.gf-light .onboard-right { background: var(--bg); }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 
   .gf-root { min-height: 100vh; }
 
@@ -525,6 +563,38 @@ const gfStyles = `
   .about-item { background: var(--card2); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px; }
   .about-item-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
   .about-item-val { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* PASSWORD CHANGE */
+  .pw-change-form { display: flex; flex-direction: column; gap: 14px; }
+  .pw-input-wrap { position: relative; }
+  .pw-input-wrap .input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+  .pw-field-input {
+    width: 100%; padding: 12px 44px 12px 42px; background: var(--card2);
+    border: 1px solid var(--border); border-radius: var(--r2);
+    color: var(--text); font-family: var(--font-body); font-size: 14px;
+    transition: all 0.2s; outline: none;
+  }
+  .pw-field-input:focus { border-color: var(--green); background: var(--card2); box-shadow: 0 0 0 3px rgba(0,232,122,0.1); }
+  .pw-field-input::placeholder { color: var(--text3); }
+  .pw-field-input.err { border-color: var(--red); }
+  .pw-eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text3); padding: 4px; }
+  .pw-eye-btn:hover { color: var(--text2); }
+  .pw-submit-btn {
+    padding: 12px 24px; background: linear-gradient(135deg, var(--green), var(--teal));
+    border: none; border-radius: var(--r2); color: var(--bg); font-family: var(--font-head);
+    font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; align-self: flex-start;
+  }
+  .pw-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,232,122,0.3); }
+  .pw-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* THEME TOGGLE ROW */
+  .theme-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+  .theme-row-label { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; color: var(--text); }
+  .theme-row-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .theme-btn-group { display: flex; gap: 6px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 4px; }
+  .theme-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-body); font-size: 13px; font-weight: 500; transition: all 0.2s; background: transparent; color: var(--text2); }
+  .theme-btn.active { background: var(--card); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 1px solid var(--border); }
+  .gf-root.gf-light .theme-btn.active { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
   /* TRANSPORT & FOOD */
   .stats-row { display: flex; gap: 16px; margin-bottom: 24px; }
@@ -1045,21 +1115,62 @@ function FoodPage() {
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ user }: { user: User }) {
+function SettingsPage({ user, theme, setTheme }: { user: User; theme: string; setTheme: (t: string) => void }) {
   const [notifs, setNotifs] = useState({
     energyLimit: true,
     co2Alert: true,
     weeklyReport: false,
     waterLimit: true,
   });
+  const [pwForm, setPwForm] = useState({ old: "", new1: "", new2: "" });
+  const [pwShow, setPwShow] = useState({ old: false, new1: false, new2: false });
+  const [pwErrors, setPwErrors] = useState<Record<string, string>>({});
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwToast, setPwToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
+
   const initials = user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+
+  const handlePwChange = () => {
+    const e: Record<string, string> = {};
+    if (!pwForm.old) e.old = "Köhnə şifrə tələb olunur";
+    if (pwForm.new1.length < 8) e.new1 = "Yeni şifrə minimum 8 simvol olmalıdır";
+    if (pwForm.new1 !== pwForm.new2) e.new2 = "Şifrələr uyğun gəlmir";
+    if (Object.keys(e).length) { setPwErrors(e); return; }
+
+    try {
+      const users: any[] = JSON.parse(localStorage.getItem("gf_users") || "[]");
+      const idx = users.findIndex(u => u.email === user.email);
+      if (idx === -1 || users[idx].password !== pwForm.old) {
+        setPwErrors({ old: "Köhnə şifrə yanlışdır" });
+        return;
+      }
+      setPwLoading(true);
+      setTimeout(() => {
+        users[idx].password = pwForm.new1;
+        localStorage.setItem("gf_users", JSON.stringify(users));
+        setPwLoading(false);
+        setPwForm({ old: "", new1: "", new2: "" });
+        setPwErrors({});
+        setPwToast({ msg: "Şifrə uğurla dəyişdirildi!", type: "success" });
+      }, 800);
+    } catch {
+      setPwErrors({ old: "Xəta baş verdi, yenidən cəhd edin" });
+    }
+  };
+
+  const upd = (f: keyof typeof pwForm, v: string) => {
+    setPwForm(p => ({ ...p, [f]: v }));
+    setPwErrors(p => ({ ...p, [f]: "" }));
+  };
 
   return (
     <div className="gf-page">
+      {pwToast && <Toast msg={pwToast.msg} type={pwToast.type} onClose={() => setPwToast(null)} />}
       <div className="dash-header">
         <div className="dash-title">Ayarlar & <span>Fərdiləşdirmə</span></div>
       </div>
 
+      {/* PROFILE */}
       <div className="settings-section">
         <div className="settings-title"><IconUser/> Profil</div>
         <div className="settings-card">
@@ -1086,6 +1197,89 @@ function SettingsPage({ user }: { user: User }) {
         </div>
       </div>
 
+      {/* PASSWORD CHANGE */}
+      <div className="settings-section">
+        <div className="settings-title"><IconKey/> Şifrəni Dəyiş</div>
+        <div className="settings-card">
+          <div className="pw-change-form">
+            {/* Old password */}
+            <div className="settings-field" style={{marginBottom:0}}>
+              <label>Köhnə Şifrə</label>
+              <div className="pw-input-wrap">
+                <span className="input-icon"><IconLock/></span>
+                <input
+                  className={`pw-field-input ${pwErrors.old ? "err" : ""}`}
+                  type={pwShow.old ? "text" : "password"}
+                  placeholder="Mövcud şifrənizi daxil edin"
+                  value={pwForm.old}
+                  onChange={e => upd("old", e.target.value)}
+                />
+                <button className="pw-eye-btn" onClick={() => setPwShow(p => ({ ...p, old: !p.old }))}><IconEye off={pwShow.old}/></button>
+              </div>
+              {pwErrors.old && <div className="err-msg">{pwErrors.old}</div>}
+            </div>
+            {/* New password */}
+            <div className="settings-field" style={{marginBottom:0}}>
+              <label>Yeni Şifrə <span style={{color:"var(--text3)",fontWeight:400,textTransform:"none"}}>(min. 8 simvol)</span></label>
+              <div className="pw-input-wrap">
+                <span className="input-icon"><IconLock/></span>
+                <input
+                  className={`pw-field-input ${pwErrors.new1 ? "err" : ""}`}
+                  type={pwShow.new1 ? "text" : "password"}
+                  placeholder="Yeni şifrənizi daxil edin"
+                  value={pwForm.new1}
+                  onChange={e => upd("new1", e.target.value)}
+                />
+                <button className="pw-eye-btn" onClick={() => setPwShow(p => ({ ...p, new1: !p.new1 }))}><IconEye off={pwShow.new1}/></button>
+              </div>
+              {pwErrors.new1 && <div className="err-msg">{pwErrors.new1}</div>}
+              {pwForm.new1 && <PasswordStrength password={pwForm.new1}/>}
+            </div>
+            {/* Confirm new password */}
+            <div className="settings-field" style={{marginBottom:0}}>
+              <label>Yeni Şifrəni Təsdiqləyin</label>
+              <div className="pw-input-wrap">
+                <span className="input-icon"><IconLock/></span>
+                <input
+                  className={`pw-field-input ${pwErrors.new2 ? "err" : ""}`}
+                  type={pwShow.new2 ? "text" : "password"}
+                  placeholder="Yeni şifrəni təkrarlayın"
+                  value={pwForm.new2}
+                  onChange={e => upd("new2", e.target.value)}
+                />
+                <button className="pw-eye-btn" onClick={() => setPwShow(p => ({ ...p, new2: !p.new2 }))}><IconEye off={pwShow.new2}/></button>
+              </div>
+              {pwErrors.new2 && <div className="err-msg">{pwErrors.new2}</div>}
+            </div>
+            <button className="pw-submit-btn" onClick={handlePwChange} disabled={pwLoading}>
+              {pwLoading ? "Yenilənir..." : "Şifrəni Dəyiş →"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* APPEARANCE / THEME */}
+      <div className="settings-section">
+        <div className="settings-title"><IconSun/> Görünüş</div>
+        <div className="settings-card">
+          <div className="theme-row">
+            <div>
+              <div className="theme-row-label">Tema seçimi</div>
+              <div className="theme-row-desc">Tətbiqin rəng sxemini seçin</div>
+            </div>
+            <div className="theme-btn-group">
+              <button className={`theme-btn ${theme === "dark" ? "active" : ""}`} onClick={() => setTheme("dark")}>
+                <IconMoon/> Tünd
+              </button>
+              <button className={`theme-btn ${theme === "light" ? "active" : ""}`} onClick={() => setTheme("light")}>
+                <IconSun/> İşıqlı
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* NOTIFICATIONS */}
       <div className="settings-section">
         <div className="settings-title"><IconBell/> Bildiriş Sistemi</div>
         <div className="settings-card">
@@ -1106,7 +1300,7 @@ function SettingsPage({ user }: { user: User }) {
                   type="checkbox"
                   className="toggle-input"
                   checked={notifs[item.key as keyof typeof notifs]}
-                  onChange={e => setNotifs(p => ({...p, [item.key]: e.target.checked}))}
+                  onChange={e => setNotifs(p => ({ ...p, [item.key]: e.target.checked }))}
                 />
                 <span className="toggle-slider"/>
               </label>
@@ -1115,6 +1309,7 @@ function SettingsPage({ user }: { user: User }) {
         </div>
       </div>
 
+      {/* ABOUT */}
       <div className="settings-section">
         <div className="settings-title"><IconInfo/> Haqqında</div>
         <div className="settings-card">
@@ -1145,7 +1340,7 @@ function SettingsPage({ user }: { user: User }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
+function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: () => void; theme: string; setTheme: (t: string) => void }) {
   const [activePage, setActivePage] = useState("overview");
   const [sensor, setSensor] = useState<SensorData>(generateSensorData());
   const [history, setHistory] = useState<HistoryEntry[]>(mockHistory);
@@ -1455,7 +1650,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         {activePage === "transport" && <TransportPage history={history}/>}
         {activePage === "food" && <FoodPage/>}
         {activePage === "carbon" && <CarbonCalculator sensor={sensor}/>}
-        {activePage === "settings" && <SettingsPage user={user}/>}
+        {activePage === "settings" && <SettingsPage user={user} theme={theme} setTheme={setTheme}/>}
 
         {activePage === "reports" && (
           <div className="gf-page">
@@ -1529,15 +1724,16 @@ function Particles() {
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function GreenFactory() {
   const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<string>("dark");
 
   return (
     <>
       <style>{gfStyles}</style>
-      <div className="gf-root">
+      <div className={`gf-root${theme === "light" ? " gf-light" : ""}`}>
         {!user && <Particles/>}
         {!user
           ? <AuthScreen onLogin={setUser}/>
-          : <Dashboard user={user} onLogout={() => setUser(null)}/>
+          : <Dashboard user={user} onLogout={() => setUser(null)} theme={theme} setTheme={setTheme}/>
         }
       </div>
     </>
