@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const generateSensorData = () => ({
@@ -151,6 +151,12 @@ const IconSun = () => (
 const IconMoon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+const IconMap = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+    <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
   </svg>
 );
 const IconMenu = () => (
@@ -635,6 +641,49 @@ const gfStyles = `
   .gf-toast-icon { font-size: 18px; flex-shrink: 0; }
   .gf-toast-msg { font-size: 13px; color: var(--text); }
 
+  /* FACTORY MAP */
+  .map-wrap { position: relative; margin-bottom: 16px; border-radius: var(--r); overflow: hidden; }
+  .factory-svg { width: 100%; height: auto; display: block; border-radius: var(--r); border: 1px solid var(--border); background: rgba(5,14,9,0.85); }
+  @keyframes equip-blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.1;transform:scale(0.5)} }
+  .equip-blink { animation: equip-blink 0.9s ease-in-out infinite; transform-origin: center; }
+  .map-legend { display: flex; gap: 20px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .map-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .map-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .map-heat-btn {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .map-heat-btn:hover { border-color: var(--green); color: var(--green); }
+  .map-heat-btn.active { background: rgba(0,232,122,0.08); border-color: var(--green); color: var(--green); }
+  .map-tooltip {
+    position: absolute; z-index: 50; pointer-events: none;
+    background: rgba(4,12,8,0.97); border: 1px solid rgba(0,232,122,0.28);
+    border-radius: 14px; padding: 14px 16px; min-width: 230px; max-width: 264px;
+    backdrop-filter: blur(16px); box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+  }
+  .map-tt-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .map-tt-status { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+  .map-tt-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .map-tt-row:last-of-type { border-bottom: none; }
+  .map-tt-row span { font-size: 12px; color: var(--text3); }
+  .map-tt-row strong { font-size: 12px; color: var(--text); font-weight: 600; }
+  .map-tt-crit { color: var(--red) !important; }
+  .map-tt-spark { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .equip-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .equip-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; transition: border-color 0.2s, transform 0.2s; }
+  .equip-card:hover { transform: translateY(-2px); }
+  .equip-card.warning { border-color: rgba(245,158,11,0.35); }
+  .equip-card.critical { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.03); }
+  .equip-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .equip-card-emoji { font-size: 22px; flex-shrink: 0; line-height: 1; }
+  .equip-card-name { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--text); }
+  .equip-params { display: flex; flex-direction: column; gap: 7px; }
+  .equip-param-row { display: flex; justify-content: space-between; align-items: center; }
+  .equip-param-lbl { font-size: 12px; color: var(--text3); }
+  .equip-param-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .equip-crit-val { color: var(--red) !important; }
+
   /* MOBILE NAV */
   .mobile-topbar {
     display: none; align-items: center; justify-content: space-between;
@@ -712,6 +761,109 @@ const gfStyles = `
     .tab-switcher { margin-bottom: 20px; }
   }
 `;
+
+// ─── FACTORY MAP DATA ─────────────────────────────────────────────────────────
+interface EquipParam { label: string; value: string; unit: string; }
+interface EquipItem {
+  id: string; name: string; icon: string;
+  cx: number; cy: number;
+  status: "normal" | "warning" | "critical";
+  blinking: boolean;
+  params: EquipParam[];
+  history: number[];
+}
+
+function generateEquipData(): EquipItem[] {
+  const fuel = +(5 + Math.random() * 93).toFixed(0);
+  const boilerTemp = +(150 + Math.random() * 88).toFixed(0);
+  const compHours = +(2000 + Math.random() * 6760).toFixed(0);
+  const compLeak = Math.random() > 0.87;
+  const battery = +(40 + Math.random() * 60).toFixed(0);
+  const chillerIn = +(18 + Math.random() * 6).toFixed(1);
+  return [
+    {
+      id: "turbine", name: "Enerji Turbini", icon: "⚡",
+      cx: 140, cy: 215,
+      status: +fuel < 10 ? "critical" : +fuel < 20 ? "warning" : "normal",
+      blinking: +fuel < 10,
+      params: [
+        { label: "Gərginlik", value: String(+(380 + Math.random()*42).toFixed(0)), unit: "V" },
+        { label: "Cari yük (Peak)", value: String(+(60 + Math.random()*38).toFixed(1)), unit: "kW" },
+        { label: "Yanacaq səviyyəsi", value: String(fuel), unit: "%" },
+        { label: "Yağ təzyiqi", value: String(+(2.0 + Math.random()*2.0).toFixed(1)), unit: "bar" },
+      ],
+      history: Array.from({length: 14}, () => +(60 + Math.random()*40)),
+    },
+    {
+      id: "boiler", name: "Sənaye Qazanı", icon: "🔥",
+      cx: 380, cy: 215,
+      status: +boilerTemp > 215 ? "critical" : +boilerTemp > 195 ? "warning" : "normal",
+      blinking: false,
+      params: [
+        { label: "Temperatur", value: String(boilerTemp), unit: "°C" },
+        { label: "Buxar təzyiqi", value: String(+(5 + Math.random()*10).toFixed(1)), unit: "bar" },
+        { label: "Su səviyyəsi", value: String(+(60 + Math.random()*36).toFixed(0)), unit: "%" },
+        { label: "Carbon Footprint", value: String(+(18 + Math.random()*36).toFixed(1)), unit: "kg CO₂/h" },
+      ],
+      history: Array.from({length: 14}, () => +(150 + Math.random()*88)),
+    },
+    {
+      id: "chiller", name: "Soyutma Qüləsi", icon: "❄️",
+      cx: 185, cy: 385,
+      status: "normal",
+      blinking: false,
+      params: [
+        { label: "Giriş suyu", value: String(chillerIn), unit: "°C" },
+        { label: "Çıxış suyu", value: String(+(+chillerIn - 5.5 - Math.random()*2).toFixed(1)), unit: "°C" },
+        { label: "Fan sürəti (RPM)", value: String(+(800 + Math.random()*700).toFixed(0)), unit: "RPM" },
+        { label: "Elektrik sərfiyyatı", value: String(+(20 + Math.random()*26).toFixed(1)), unit: "kW" },
+      ],
+      history: Array.from({length: 14}, () => +(18 + Math.random()*6)),
+    },
+    {
+      id: "compressor", name: "Hava Kompressoru", icon: "💨",
+      cx: 450, cy: 385,
+      status: compLeak ? "critical" : +compHours > 7500 ? "warning" : "normal",
+      blinking: compLeak,
+      params: [
+        { label: "Hava sızması", value: compLeak ? "Aşkarlandı!" : "Yoxdur", unit: "" },
+        { label: "İşləmə saatı", value: String(compHours), unit: "h" },
+        { label: "Servis qalır", value: String(Math.max(0, 8760 - +compHours)), unit: "h" },
+        { label: "Sıxışdırma", value: String(+(6 + Math.random()*4).toFixed(1)), unit: "bar" },
+      ],
+      history: Array.from({length: 14}, () => +(6 + Math.random()*4)),
+    },
+    {
+      id: "solar", name: "Günəş Panelləri", icon: "☀️",
+      cx: 560, cy: 95,
+      status: +battery < 45 ? "warning" : "normal",
+      blinking: false,
+      params: [
+        { label: "Anlıq istehsal", value: String(+(200 + Math.random()*600).toFixed(0)), unit: "W/m²" },
+        { label: "Panel təmizliyi", value: String(+(70 + Math.random()*30).toFixed(0)), unit: "%" },
+        { label: "Batareya dolumu", value: String(battery), unit: "%" },
+      ],
+      history: Array.from({length: 14}, () => +(200 + Math.random()*600)),
+    },
+  ];
+}
+
+function MiniSparkline({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data), min = Math.min(...data);
+  const range = max - min || 1;
+  const W = 80, H = 28;
+  const pts = data.map((v, i) => ({
+    x: (i / (data.length - 1)) * W,
+    y: H - ((v - min) / range) * (H - 2) + 1,
+  }));
+  const path = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width: 80, height: 28, flexShrink: 0, display: "block"}}>
+      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getPasswordStrength(pw: string): number {
@@ -1411,6 +1563,183 @@ function SettingsPage({ user, theme, setTheme }: { user: User; theme: string; se
   );
 }
 
+// ─── FACTORY MAP COMPONENT ───────────────────────────────────────────────────
+function FactoryMap() {
+  const [equips, setEquips] = useState<EquipItem[]>(generateEquipData());
+  const [hovered, setHovered] = useState<EquipItem | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setInterval(() => setEquips(generateEquipData()), 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  const statusColor = (s: EquipItem["status"]) =>
+    s === "critical" ? "#EF4444" : s === "warning" ? "#F59E0B" : "#00E87A";
+
+  const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setTooltipPos({
+      x: Math.min(e.clientX - rect.left + 16, rect.width - 270),
+      y: Math.max(e.clientY - rect.top - 20, 4),
+    });
+  };
+
+  return (
+    <div className="gf-page">
+      <div className="dash-header">
+        <div>
+          <div className="dash-title">Fabrik <span>Xəritəsi</span></div>
+          <div style={{fontSize:13,color:"var(--text2)",marginTop:4}}>İnteraktiv avadanlıq monitorinqi — canlı status izləmə</div>
+        </div>
+        <button className={`map-heat-btn ${showHeatmap ? "active" : ""}`} onClick={() => setShowHeatmap(v => !v)}>
+          🌡️ İstilik Xəritəsi
+        </button>
+      </div>
+
+      <div className="map-legend">
+        {[["#00E87A","Normal işləmə"],["#F59E0B","Xəbərdarlıq — texniki baxış"],["#EF4444","Kritik / Yüksək sərfiyyat"]].map(([c,l]) => (
+          <div key={l} className="map-legend-item">
+            <div className="map-legend-dot" style={{background:c}}/>{l}
+          </div>
+        ))}
+      </div>
+
+      <div ref={containerRef} className="map-wrap">
+        <svg viewBox="0 0 700 480" className="factory-svg"
+          onMouseMove={handleSvgMouseMove}
+          onMouseLeave={() => setHovered(null)}>
+
+          {/* Building shell */}
+          <rect x="10" y="10" width="680" height="460" rx="10"
+            fill="rgba(6,16,11,0.8)" stroke="rgba(0,232,122,0.18)" strokeWidth="1.5"/>
+
+          {/* Zone: Solar (top-right) */}
+          <rect x="412" y="22" width="266" height="148" rx="6"
+            fill="rgba(251,191,36,0.05)" stroke="rgba(251,191,36,0.22)" strokeWidth="1" strokeDasharray="5 3"/>
+          <text x="545" y="40" textAnchor="middle" fontSize="10" fill="rgba(251,191,36,0.65)"
+            fontFamily="system-ui" letterSpacing="1.2">GÜNƏŞ ENERJİSİ ZOLASI</text>
+
+          {/* Zone: Turbine (middle-left) */}
+          <rect x="22" y="155" width="210" height="178" rx="6"
+            fill="rgba(245,158,11,0.04)" stroke="rgba(245,158,11,0.18)" strokeWidth="1" strokeDasharray="5 3"/>
+          <text x="127" y="172" textAnchor="middle" fontSize="10" fill="rgba(245,158,11,0.6)"
+            fontFamily="system-ui" letterSpacing="1.2">ENERJİ ZOLASI</text>
+
+          {/* Zone: Boiler (middle-right) */}
+          <rect x="255" y="155" width="215" height="178" rx="6"
+            fill="rgba(239,68,68,0.04)" stroke="rgba(239,68,68,0.18)" strokeWidth="1" strokeDasharray="5 3"/>
+          <text x="362" y="172" textAnchor="middle" fontSize="10" fill="rgba(239,68,68,0.6)"
+            fontFamily="system-ui" letterSpacing="1.2">QAZANXANA</text>
+
+          {/* Zone: Production floor (bottom) */}
+          <rect x="22" y="348" width="656" height="110" rx="6"
+            fill="rgba(0,180,219,0.04)" stroke="rgba(0,180,219,0.18)" strokeWidth="1" strokeDasharray="5 3"/>
+          <text x="350" y="366" textAnchor="middle" fontSize="10" fill="rgba(0,180,219,0.6)"
+            fontFamily="system-ui" letterSpacing="1.2">İSTEHSAL MƏRTƏBƏSİ — Resource Waste Monitoring</text>
+
+          {/* Pipe / connection lines */}
+          <line x1="185" y1="215" x2="255" y2="215" stroke="rgba(0,232,122,0.2)" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <line x1="362" y1="335" x2="230" y2="358" stroke="rgba(0,180,219,0.2)" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <line x1="362" y1="335" x2="410" y2="358" stroke="rgba(0,180,219,0.2)" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <line x1="548" y1="122" x2="385" y2="200" stroke="rgba(251,191,36,0.2)" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <line x1="127" y1="175" x2="127" y2="195" stroke="rgba(245,158,11,0.15)" strokeWidth="1" strokeDasharray="4 2"/>
+
+          {/* Heatmap overlay */}
+          {showHeatmap && (
+            <g>
+              <defs>
+                <radialGradient id="hm0"><stop offset="0%" stopColor="#EF4444" stopOpacity="0.38"/><stop offset="100%" stopColor="#EF4444" stopOpacity="0"/></radialGradient>
+                <radialGradient id="hm1"><stop offset="0%" stopColor="#F59E0B" stopOpacity="0.32"/><stop offset="100%" stopColor="#F59E0B" stopOpacity="0"/></radialGradient>
+                <radialGradient id="hm2"><stop offset="0%" stopColor="#EF4444" stopOpacity="0.28"/><stop offset="100%" stopColor="#EF4444" stopOpacity="0"/></radialGradient>
+                <radialGradient id="hm3"><stop offset="0%" stopColor="#00B4DB" stopOpacity="0.22"/><stop offset="100%" stopColor="#00B4DB" stopOpacity="0"/></radialGradient>
+              </defs>
+              <ellipse cx="140" cy="215" rx="115" ry="88" fill="url(#hm0)"/>
+              <ellipse cx="380" cy="215" rx="108" ry="82" fill="url(#hm1)"/>
+              <ellipse cx="185" cy="385" rx="80" ry="58" fill="url(#hm2)"/>
+              <ellipse cx="450" cy="385" rx="72" ry="52" fill="url(#hm3)"/>
+            </g>
+          )}
+
+          {/* Equipment nodes */}
+          {equips.map(eq => {
+            const sc = statusColor(eq.status);
+            const isHov = hovered?.id === eq.id;
+            return (
+              <g key={eq.id} onMouseEnter={() => setHovered(eq)} onMouseLeave={() => setHovered(null)} style={{cursor:"pointer"}}>
+                {/* Pulse ring on hover */}
+                {isHov && <circle cx={eq.cx} cy={eq.cy} r="42" fill="none" stroke={sc} strokeWidth="1" strokeDasharray="4 2" opacity="0.5"/>}
+                {/* Glow halo */}
+                <circle cx={eq.cx} cy={eq.cy} r="36" fill={`${sc}0d`} stroke={`${sc}28`} strokeWidth="1"/>
+                {/* Body circle */}
+                <circle cx={eq.cx} cy={eq.cy} r="26" fill="rgba(5,14,9,0.95)" stroke={sc} strokeWidth={isHov ? "2.5" : "2"}/>
+                {/* Status dot (blinks if critical) */}
+                <circle cx={eq.cx + 19} cy={eq.cy - 19} r="6" fill={sc} className={eq.blinking ? "equip-blink" : ""}/>
+                {/* Icon */}
+                <text x={eq.cx} y={eq.cy + 7} textAnchor="middle" fontSize="19">{eq.icon}</text>
+                {/* Name label */}
+                <text x={eq.cx} y={eq.cy + 52} textAnchor="middle" fontSize="9.5"
+                  fill="rgba(230,255,240,0.78)" fontFamily="system-ui" fontWeight="600">{eq.name}</text>
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* Hover Tooltip */}
+        {hovered && (
+          <div className="map-tooltip" style={{left: tooltipPos.x, top: tooltipPos.y}}>
+            <div className="map-tt-title">{hovered.icon} {hovered.name}</div>
+            <div className="map-tt-status" style={{color: statusColor(hovered.status)}}>
+              ● {hovered.status === "critical" ? "Kritik vəziyyət" : hovered.status === "warning" ? "Texniki xəbərdarlıq" : "Normal işləmə"}
+            </div>
+            {hovered.params.map((p, i) => (
+              <div key={i} className="map-tt-row">
+                <span>{p.label}</span>
+                <strong className={p.value === "Aşkarlandı!" ? "map-tt-crit" : ""}>{p.value}{p.unit ? ` ${p.unit}` : ""}</strong>
+              </div>
+            ))}
+            <div className="map-tt-spark">
+              <div style={{fontSize:10,color:"var(--text3)",marginBottom:3}}>Son trend</div>
+              <MiniSparkline data={hovered.history} color={statusColor(hovered.status)}/>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Equipment cards */}
+      <div className="equip-cards-grid">
+        {equips.map(eq => (
+          <div key={eq.id} className={`equip-card ${eq.status}`}>
+            <div className="equip-card-head">
+              <span className="equip-card-emoji">{eq.icon}</span>
+              <div style={{flex:1, minWidth:0}}>
+                <div className="equip-card-name">{eq.name}</div>
+                <div style={{fontSize:11,color:statusColor(eq.status),marginTop:2}}>
+                  {eq.status === "critical" ? "🔴 Kritik" : eq.status === "warning" ? "🟡 Xəbərdarlıq" : "🟢 Normal"}
+                </div>
+              </div>
+              <MiniSparkline data={eq.history} color={statusColor(eq.status)}/>
+            </div>
+            <div className="equip-params">
+              {eq.params.map((p, i) => (
+                <div key={i} className="equip-param-row">
+                  <span className="equip-param-lbl">{p.label}</span>
+                  <span className={`equip-param-val ${p.value === "Aşkarlandı!" ? "equip-crit-val" : ""}`}>
+                    {p.value}{p.unit ? ` ${p.unit}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: () => void; theme: string; setTheme: (t: string) => void }) {
   const [activePage, setActivePage] = useState("overview");
@@ -1443,6 +1772,7 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
     { id: "emissions", label: "Karbon Emissiyası", icon: <IconWind/>, section: "Əsas" },
     { id: "transport", label: "Nəqliyyat", icon: <IconTruck/>, section: "Panellər" },
     { id: "food", label: "Qida Resursları", icon: <IconApple/>, section: "Panellər" },
+    { id: "map", label: "Fabrik Xəritəsi", icon: <IconMap/>, section: "Analitika" },
     { id: "carbon", label: "Karbon Kalk.", icon: <IconBarChart/>, section: "Analitika" },
     { id: "reports", label: "Hesabatlar", icon: <IconBarChart/>, section: "Analitika" },
     { id: "settings", label: "Ayarlar", icon: <IconSettings/>, section: "Sistem" },
@@ -1539,6 +1869,7 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
           </div>
         </div>
 
+        {activePage === "map" && <FactoryMap/>}
         {activePage === "overview" && (
           <div className="gf-page">
             <div className="dash-header">
