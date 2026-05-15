@@ -153,6 +153,16 @@ const IconMoon = () => (
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
   </svg>
 );
+const IconMenu = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+);
+const IconX = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
 const IconKey = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
     <circle cx="7.5" cy="15.5" r="5.5"/>
@@ -279,7 +289,7 @@ const gfStyles = `
   .onboard-right {
     background: var(--bg); display: flex; flex-direction: column;
     justify-content: center; align-items: center; padding: 60px 48px;
-    position: relative; z-index: 1;
+    position: relative; z-index: 1; min-height: 100vh;
   }
   .auth-box { width: 100%; max-width: 420px; }
   .tab-switcher {
@@ -625,9 +635,52 @@ const gfStyles = `
   .gf-toast-icon { font-size: 18px; flex-shrink: 0; }
   .gf-toast-msg { font-size: 13px; color: var(--text); }
 
+  /* MOBILE NAV */
+  .mobile-topbar {
+    display: none; align-items: center; justify-content: space-between;
+    padding: 14px 20px; background: var(--bg2); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .mobile-topbar-brand { display: flex; align-items: center; gap: 8px; }
+  .mobile-topbar-brand span { font-family: var(--font-head); font-size: 17px; font-weight: 800; color: var(--text); }
+  .mobile-topbar-brand em { color: var(--green); font-style: normal; }
+  .mobile-topbar-right { display: flex; align-items: center; gap: 10px; }
+  .hamburger-btn {
+    width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .hamburger-btn:hover { border-color: var(--green); color: var(--green); }
+  .mobile-avatar-sm {
+    width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--teal));
+    display: flex; align-items: center; justify-content: center; color: var(--bg);
+    font-family: var(--font-head); font-size: 13px; font-weight: 800; flex-shrink: 0;
+  }
+  .mobile-drawer {
+    position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    z-index: 300; display: flex; flex-direction: column; padding: 28px 0 20px;
+    transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    overflow-y: auto;
+  }
+  .mobile-drawer.open { transform: translateX(0); box-shadow: 4px 0 32px rgba(0,0,0,0.4); }
+  .mobile-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 299; backdrop-filter: blur(2px);
+  }
+  .mobile-overlay.visible { display: block; }
+  .mobile-drawer-close {
+    position: absolute; top: 18px; right: 16px;
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mobile-drawer-close:hover { color: var(--text); border-color: var(--border2); }
+
   @media (max-width: 1100px) {
     .onboard-wrap { grid-template-columns: 1fr; }
     .onboard-left { display: none; }
+    .onboard-right { padding: 40px 32px; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .section-grid { grid-template-columns: 1fr; }
     .section-grid-3 { grid-template-columns: 1fr; }
@@ -638,6 +691,25 @@ const gfStyles = `
   @media (max-width: 768px) {
     .dash-layout { grid-template-columns: 1fr; }
     .sidebar { display: none; }
+    .mobile-topbar { display: flex !important; }
+    .dash-main { padding: 0; }
+    .gf-page { padding: 16px 16px 24px; }
+    .dash-header { margin-bottom: 16px; }
+    .dash-title { font-size: 20px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+    .kpi-value { font-size: 26px; }
+    .kpi-card { padding: 14px; }
+    .panel { padding: 16px; }
+    .form-row { grid-template-columns: 1fr; }
+    .onboard-right { padding: 28px 20px; }
+    .auth-title { font-size: 22px; }
+    .waste-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 420px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .kpi-value { font-size: 24px; }
+    .onboard-right { padding: 24px 16px; }
+    .tab-switcher { margin-bottom: 20px; }
   }
 `;
 
@@ -1342,6 +1414,7 @@ function SettingsPage({ user, theme, setTheme }: { user: User; theme: string; se
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: () => void; theme: string; setTheme: (t: string) => void }) {
   const [activePage, setActivePage] = useState("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sensor, setSensor] = useState<SensorData>(generateSensorData());
   const [history, setHistory] = useState<HistoryEntry[]>(mockHistory);
 
@@ -1379,6 +1452,45 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
 
   return (
     <div className="dash-layout">
+      {/* Mobile overlay */}
+      <div className={`mobile-overlay ${mobileMenuOpen ? "visible" : ""}`} onClick={() => setMobileMenuOpen(false)} />
+
+      {/* Mobile slide-in drawer */}
+      <div className={`mobile-drawer ${mobileMenuOpen ? "open" : ""}`}>
+        <button className="mobile-drawer-close" onClick={() => setMobileMenuOpen(false)}><IconX/></button>
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-icon"><IconLeaf/></div>
+          <span>Green<em>Factory</em></span>
+        </div>
+        <div className="nav-section">
+          {sections.map(section => (
+            <div key={section}>
+              <div className="nav-label">{section}</div>
+              {navItems.filter(n => n.section === section).map(item => (
+                <div
+                  key={item.id}
+                  className={`nav-item ${activePage === item.id ? "active" : ""}`}
+                  onClick={() => { setActivePage(item.id); setMobileMenuOpen(false); }}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="sidebar-bottom">
+          <div className="user-card">
+            <div className="user-avatar">{initials}</div>
+            <div className="user-info">
+              <div className="user-name">{user.name}</div>
+              <div className="user-role">Operator</div>
+            </div>
+            <button className="logout-btn" onClick={onLogout} title="Çıxış"><IconLogOut/></button>
+          </div>
+        </div>
+      </div>
+
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon"><IconLeaf/></div>
@@ -1415,6 +1527,18 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
       </aside>
 
       <main className="dash-main">
+        {/* Mobile top bar — visible only on small screens */}
+        <div className="mobile-topbar">
+          <div className="mobile-topbar-brand">
+            <div className="sidebar-logo-icon" style={{width:32,height:32,borderRadius:8}}><IconLeaf/></div>
+            <span>Green<em>Factory</em></span>
+          </div>
+          <div className="mobile-topbar-right">
+            <div className="mobile-avatar-sm">{initials}</div>
+            <button className="hamburger-btn" onClick={() => setMobileMenuOpen(true)}><IconMenu/></button>
+          </div>
+        </div>
+
         {activePage === "overview" && (
           <div className="gf-page">
             <div className="dash-header">
