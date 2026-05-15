@@ -19,6 +19,96 @@ const mockHistory = Array.from({ length: 12 }, (_, i) => ({
 interface User {
   name: string;
   email: string;
+  isAdmin?: boolean;
+}
+
+interface StoredUser {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  isAdmin?: boolean;
+}
+
+interface AlertThreshold {
+  turbineMaxLoad: number;
+  turbineMinFuel: number;
+  boilerMaxTemp: number;
+  boilerMaxCO2: number;
+  chillerMaxPower: number;
+  compMaxPressure: number;
+  solarMinBattery: number;
+}
+
+interface AlertEvent {
+  id: string;
+  timestamp: string;
+  equipmentId: string;
+  equipmentName: string;
+  paramName: string;
+  currentValue: string;
+  threshold: string;
+  severity: "warning" | "critical";
+  telegramSent: boolean;
+}
+
+const DEFAULT_THRESHOLDS: AlertThreshold = {
+  turbineMaxLoad: 85,
+  turbineMinFuel: 15,
+  boilerMaxTemp: 200,
+  boilerMaxCO2: 40,
+  chillerMaxPower: 38,
+  compMaxPressure: 9.5,
+  solarMinBattery: 50,
+};
+
+function loadThresholds(): AlertThreshold {
+  try { return { ...DEFAULT_THRESHOLDS, ...JSON.parse(localStorage.getItem("gf_thresholds") || "{}") }; }
+  catch { return DEFAULT_THRESHOLDS; }
+}
+
+function loadAlertHistory(): AlertEvent[] {
+  try { return JSON.parse(localStorage.getItem("gf_alerts") || "[]"); }
+  catch { return []; }
+}
+
+function checkAlerts(equips: EquipItem[], thresholds: AlertThreshold): Array<Omit<AlertEvent, "id"|"timestamp"|"telegramSent">> {
+  const out: Array<Omit<AlertEvent, "id"|"timestamp"|"telegramSent">> = [];
+  const p = (eq: EquipItem, label: string) => eq.params.find(x => x.label === label);
+  for (const eq of equips) {
+    if (eq.id === "turbine") {
+      const load = p(eq, "Cari yük (Peak)");
+      if (load && +load.value > thresholds.turbineMaxLoad)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "Cari yük", currentValue: `${load.value} kW`, threshold: `≤ ${thresholds.turbineMaxLoad} kW`, severity: "critical" });
+      const fuel = p(eq, "Yanacaq səviyyəsi");
+      if (fuel && +fuel.value < thresholds.turbineMinFuel)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "Yanacaq səviyyəsi", currentValue: `${fuel.value}%`, threshold: `≥ ${thresholds.turbineMinFuel}%`, severity: "critical" });
+    }
+    if (eq.id === "boiler") {
+      const temp = p(eq, "Temperatur");
+      if (temp && +temp.value > thresholds.boilerMaxTemp)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "Temperatur", currentValue: `${temp.value} °C`, threshold: `≤ ${thresholds.boilerMaxTemp} °C`, severity: +temp.value > thresholds.boilerMaxTemp + 10 ? "critical" : "warning" });
+      const co2 = p(eq, "Carbon Footprint");
+      if (co2 && +co2.value > thresholds.boilerMaxCO2)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "CO₂ emissiyası", currentValue: `${co2.value} kg/h`, threshold: `≤ ${thresholds.boilerMaxCO2} kg/h`, severity: "warning" });
+    }
+    if (eq.id === "chiller") {
+      const pwr = p(eq, "Elektrik sərfiyyatı");
+      if (pwr && +pwr.value > thresholds.chillerMaxPower)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "Elektrik sərfiyyatı", currentValue: `${pwr.value} kW`, threshold: `≤ ${thresholds.chillerMaxPower} kW`, severity: "warning" });
+    }
+    if (eq.id === "compressor") {
+      const pres = p(eq, "Sıxışdırma");
+      if (pres && +pres.value > thresholds.compMaxPressure)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "Sıxışdırma", currentValue: `${pres.value} bar`, threshold: `≤ ${thresholds.compMaxPressure} bar`, severity: "warning" });
+    }
+    if (eq.id === "solar") {
+      const bat = p(eq, "Batareya dolumu");
+      if (bat && +bat.value < thresholds.solarMinBattery)
+        out.push({ equipmentId: eq.id, equipmentName: eq.name, paramName: "Batareya dolumu", currentValue: `${bat.value}%`, threshold: `≥ ${thresholds.solarMinBattery}%`, severity: "warning" });
+    }
+  }
+  return out;
 }
 
 interface SensorData {
@@ -641,6 +731,56 @@ const gfStyles = `
   .gf-toast-icon { font-size: 18px; flex-shrink: 0; }
   .gf-toast-msg { font-size: 13px; color: var(--text); }
 
+  /* SECURITY & ALERTS */
+  .admin-badge { display:inline-block; background:rgba(251,191,36,0.12); color:#FBBF24; border:1px solid rgba(251,191,36,0.3); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; margin-left:8px; vertical-align:middle; }
+  .sec-crit-badge { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); color:#EF4444; padding:8px 16px; border-radius:10px; font-size:13px; font-weight:700; }
+  .sec-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+  .sec-stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; text-align:center; }
+  .sec-stat-card.critical { border-color:rgba(239,68,68,0.3); }
+  .sec-stat-card.warning { border-color:rgba(245,158,11,0.3); }
+  .sec-stat-num { font-family:var(--font-head); font-size:28px; font-weight:800; color:var(--text); line-height:1; }
+  .sec-stat-lbl { font-size:11px; color:var(--text3); margin-top:4px; }
+  .sec-tab-bar { margin-bottom:16px; }
+  .sec-violations, .sec-hist-list { display:flex; flex-direction:column; gap:8px; }
+  .sec-violation-row { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; transition:border-color 0.2s; }
+  .sec-violation-row.critical { border-color:rgba(239,68,68,0.35); background:rgba(239,68,68,0.04); }
+  .sec-violation-row.warning { border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.03); }
+  .sec-violation-icon { font-size:18px; flex-shrink:0; }
+  .sec-violation-info { flex:1; min-width:0; }
+  .sec-violation-equip { font-size:14px; font-weight:700; color:var(--text); font-family:var(--font-head); }
+  .sec-violation-param { font-size:12px; color:var(--text3); margin-top:2px; }
+  .sec-violation-vals { text-align:right; }
+  .sec-violation-current { font-size:15px; font-weight:700; color:var(--text); }
+  .sec-violation-thresh { font-size:11px; color:var(--text3); margin-top:2px; }
+  .sec-sev-badge { font-size:10px; font-weight:800; padding:3px 7px; border-radius:5px; letter-spacing:0.5px; flex-shrink:0; }
+  .sec-sev-badge.critical { background:rgba(239,68,68,0.18); color:#EF4444; }
+  .sec-sev-badge.warning { background:rgba(245,158,11,0.15); color:#F59E0B; }
+  .sec-hist-row { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; }
+  .sec-hist-row.critical { border-color:rgba(239,68,68,0.25); }
+  .sec-hist-row.warning { border-color:rgba(245,158,11,0.2); }
+  .sec-hist-equip { font-size:13px; font-weight:600; color:var(--text); }
+  .sec-hist-meta { font-size:11px; color:var(--text3); margin-top:2px; }
+  .sec-hist-val { font-size:13px; font-weight:700; color:var(--text); }
+  .sec-hist-thresh { font-size:11px; color:var(--text3); }
+  .sec-empty { text-align:center; padding:48px 20px; color:var(--text2); }
+  .sec-empty-title { font-size:18px; font-weight:700; margin-top:12px; color:var(--text); }
+  .sec-empty-sub { font-size:13px; margin-top:6px; }
+  .sec-admin-notice { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.25); border-radius:var(--r); padding:12px 16px; font-size:13px; color:rgba(139,92,246,0.9); margin-bottom:16px; }
+  .sec-thresh-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; margin-bottom:20px; }
+  .sec-thresh-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:16px; }
+  .sec-thresh-label { font-size:13px; font-weight:600; color:var(--text); margin-bottom:10px; }
+  .sec-thresh-row { display:flex; align-items:center; gap:10px; }
+  .sec-slider { flex:1; accent-color:var(--green); cursor:pointer; height:4px; }
+  .sec-slider:disabled { opacity:0.4; cursor:not-allowed; }
+  .sec-thresh-val-box { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .sec-num-input { width:60px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:4px 8px; color:var(--text); font-size:13px; font-weight:600; text-align:center; }
+  .sec-num-input:disabled { opacity:0.4; cursor:not-allowed; }
+  .sec-thresh-unit { font-size:12px; color:var(--text3); }
+  .sec-save-btn { display:block; margin:0 auto; padding:12px 32px; background:var(--green); color:#000; font-size:14px; font-weight:700; border:none; border-radius:10px; cursor:pointer; transition:all 0.2s; }
+  .sec-save-btn:hover { opacity:0.88; }
+  .sec-save-btn.saved { background:#00c466; }
+  @media(max-width:600px) { .sec-stats-row { grid-template-columns:repeat(2,1fr); } }
+
   /* FACTORY MAP */
   .map-wrap { position: relative; margin-bottom: 16px; border-radius: var(--r); overflow: hidden; }
   .factory-svg { width: 100%; height: auto; display: block; border-radius: var(--r); border: 1px solid var(--border); background: rgba(5,14,9,0.85); }
@@ -946,7 +1086,7 @@ function AuthScreen({ onLogin }: { onLogin: (u: User) => void }) {
   const [signIn, setSignIn] = useState({ email: "", password: "" });
   const [signUp, setSignUp] = useState({ firstName: "", lastName: "", email: "", password: "", confirm: "" });
 
-  const getUsers = (): User[] => {
+  const getUsers = (): StoredUser[] => {
     try { return JSON.parse(localStorage.getItem("gf_users") || "[]"); } catch { return []; }
   };
 
@@ -975,10 +1115,11 @@ function AuthScreen({ onLogin }: { onLogin: (u: User) => void }) {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      const newUser = { firstName: signUp.firstName, lastName: signUp.lastName, email: signUp.email, password: signUp.password };
       const users = getUsers();
+      const isFirstUser = users.length === 0;
+      const newUser: StoredUser = { firstName: signUp.firstName, lastName: signUp.lastName, email: signUp.email, password: signUp.password, isAdmin: isFirstUser };
       localStorage.setItem("gf_users", JSON.stringify([...users, newUser]));
-      onLogin({ name: `${signUp.firstName} ${signUp.lastName}`, email: signUp.email });
+      onLogin({ name: `${signUp.firstName} ${signUp.lastName}`, email: signUp.email, isAdmin: isFirstUser });
     }, 1200);
   };
 
@@ -1000,7 +1141,7 @@ function AuthScreen({ onLogin }: { onLogin: (u: User) => void }) {
         setToast({ msg: "Şifrə yanlışdır. Yenidən cəhd edin", type: "error" });
         return;
       }
-      onLogin({ name: `${found.firstName} ${found.lastName}`, email: found.email });
+      onLogin({ name: `${(found as StoredUser).firstName} ${(found as StoredUser).lastName}`, email: (found as StoredUser).email, isAdmin: !!(found as StoredUser).isAdmin });
     }, 1000);
   };
 
@@ -1563,6 +1704,177 @@ function SettingsPage({ user, theme, setTheme }: { user: User; theme: string; se
   );
 }
 
+// ─── SECURITY ALERTS PAGE ────────────────────────────────────────────────────
+function SecurityAlerts({ isAdmin, thresholds, setThresholds, alertHistory }: {
+  isAdmin: boolean;
+  thresholds: AlertThreshold;
+  setThresholds: (t: AlertThreshold) => void;
+  alertHistory: AlertEvent[];
+}) {
+  const [activeTab, setActiveTab] = useState<"status"|"history"|"config">("status");
+  const [local, setLocal] = useState<AlertThreshold>(thresholds);
+  const [saved, setSaved] = useState(false);
+
+  const criticalCount = alertHistory.filter(a => a.severity === "critical").length;
+  const warningCount = alertHistory.filter(a => a.severity === "warning").length;
+  const todayStr = new Date().toLocaleDateString("az-AZ");
+  const todayCount = alertHistory.filter(a => a.timestamp.startsWith(todayStr) || a.timestamp.includes(new Date().getFullYear().toString())).length;
+
+  const liveEquips = generateEquipData();
+  const violations = checkAlerts(liveEquips, thresholds);
+
+  const thresholdRows: { label: string; key: keyof AlertThreshold; unit: string; min: number; max: number; step: number }[] = [
+    { label: "Turbin — Maks. yük", key: "turbineMaxLoad", unit: "kW", min: 50, max: 100, step: 1 },
+    { label: "Turbin — Min. yanacaq", key: "turbineMinFuel", unit: "%", min: 5, max: 40, step: 1 },
+    { label: "Qazan — Maks. temperatur", key: "boilerMaxTemp", unit: "°C", min: 150, max: 240, step: 5 },
+    { label: "Qazan — Maks. CO₂", key: "boilerMaxCO2", unit: "kg/h", min: 15, max: 60, step: 1 },
+    { label: "Soyuducu — Maks. elektrik", key: "chillerMaxPower", unit: "kW", min: 20, max: 50, step: 1 },
+    { label: "Kompressor — Maks. sıxışdırma", key: "compMaxPressure", unit: "bar", min: 5, max: 12, step: 0.5 },
+    { label: "Günəş — Min. batareya", key: "solarMinBattery", unit: "%", min: 20, max: 70, step: 5 },
+  ];
+
+  const handleSave = () => {
+    setThresholds(local);
+    try { localStorage.setItem("gf_thresholds", JSON.stringify(local)); } catch {}
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  return (
+    <div className="gf-page">
+      <div className="dash-header">
+        <div>
+          <div className="dash-title">Təhlükəsizlik &amp; <span>Alertlər</span></div>
+          <div style={{fontSize:13,color:"var(--text2)",marginTop:4}}>
+            Threshold monitorinqi — real vaxt xəbərdarlıq sistemi
+            {isAdmin && <span className="admin-badge">👑 Admin</span>}
+          </div>
+        </div>
+        {violations.length > 0 && (
+          <div className="sec-crit-badge">🔴 {violations.length} aktiv xəbərdarlıq</div>
+        )}
+      </div>
+
+      <div className="sec-stats-row">
+        {[
+          { num: alertHistory.length, lbl: "Ümumi alert", cls: "" },
+          { num: criticalCount, lbl: "Kritik", cls: "critical" },
+          { num: warningCount, lbl: "Xəbərdarlıq", cls: "warning" },
+          { num: todayCount, lbl: "Bu gün", cls: "" },
+        ].map(s => (
+          <div key={s.lbl} className={`sec-stat-card ${s.cls}`}>
+            <div className="sec-stat-num" style={s.cls === "critical" ? {color:"#EF4444"} : s.cls === "warning" ? {color:"#F59E0B"} : {}}>
+              {s.num}
+            </div>
+            <div className="sec-stat-lbl">{s.lbl}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tab-bar sec-tab-bar">
+        {([["status","🔍 Cari Status"],["history","📋 Alert Tarixi"],["config","⚙️ Hədd Konfiqurasiyası"]] as const).map(([t, lbl]) => (
+          <button key={t} className={`tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>{lbl}</button>
+        ))}
+      </div>
+
+      {activeTab === "status" && (
+        violations.length === 0 ? (
+          <div className="sec-empty">
+            <div style={{fontSize:48}}>✅</div>
+            <div className="sec-empty-title">Bütün sistemlər normal işləyir</div>
+            <div className="sec-empty-sub">Heç bir threshold aşılmayıb — sistemlər stabildir</div>
+          </div>
+        ) : (
+          <div className="sec-violations">
+            {violations.map((v, i) => (
+              <div key={i} className={`sec-violation-row ${v.severity}`}>
+                <div className="sec-violation-icon">{v.severity === "critical" ? "🔴" : "🟡"}</div>
+                <div className="sec-violation-info">
+                  <div className="sec-violation-equip">{v.equipmentName}</div>
+                  <div className="sec-violation-param">{v.paramName}</div>
+                </div>
+                <div className="sec-violation-vals">
+                  <div className="sec-violation-current">{v.currentValue}</div>
+                  <div className="sec-violation-thresh">Hədd: {v.threshold}</div>
+                </div>
+                <div className={`sec-sev-badge ${v.severity}`}>
+                  {v.severity === "critical" ? "KRİTİK" : "XƏBƏRDARLIQ"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {activeTab === "history" && (
+        alertHistory.length === 0 ? (
+          <div className="sec-empty">
+            <div style={{fontSize:48}}>📋</div>
+            <div className="sec-empty-title">Alert tarixi boşdur</div>
+            <div className="sec-empty-sub">Threshold aşıldıqda bura yazılacaq</div>
+          </div>
+        ) : (
+          <div className="sec-hist-list">
+            {alertHistory.map(a => (
+              <div key={a.id} className={`sec-hist-row ${a.severity}`}>
+                <div style={{fontSize:16,flexShrink:0}}>{a.severity === "critical" ? "🔴" : "🟡"}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="sec-hist-equip">{a.equipmentName} — {a.paramName}</div>
+                  <div className="sec-hist-meta">{a.timestamp}{a.telegramSent && " · ✈️ Telegram"}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div className="sec-hist-val">{a.currentValue}</div>
+                  <div className="sec-hist-thresh">Hədd: {a.threshold}</div>
+                </div>
+                <div className={`sec-sev-badge ${a.severity}`}>{a.severity === "critical" ? "KRİTİK" : "XƏBƏR"}</div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {activeTab === "config" && (
+        <div>
+          {!isAdmin && (
+            <div className="sec-admin-notice">
+              🔒 Threshold dəyişdirmək yalnız <strong>Admin</strong> üçündür. Hal-hazırda mövcud həddlər göstərilir.
+            </div>
+          )}
+          <div className="sec-thresh-grid">
+            {thresholdRows.map(row => (
+              <div key={row.key} className="sec-thresh-card">
+                <div className="sec-thresh-label">{row.label}</div>
+                <div className="sec-thresh-row">
+                  <input
+                    type="range" min={row.min} max={row.max} step={row.step}
+                    value={local[row.key]} disabled={!isAdmin}
+                    className="sec-slider"
+                    onChange={e => setLocal(p => ({...p, [row.key]: +e.target.value}))}
+                  />
+                  <div className="sec-thresh-val-box">
+                    <input
+                      type="number" min={row.min} max={row.max} step={row.step}
+                      value={local[row.key]} disabled={!isAdmin}
+                      className="sec-num-input"
+                      onChange={e => setLocal(p => ({...p, [row.key]: +e.target.value}))}
+                    />
+                    <span className="sec-thresh-unit">{row.unit}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {isAdmin && (
+            <button className={`sec-save-btn ${saved ? "saved" : ""}`} onClick={handleSave}>
+              {saved ? "✅ Yadda saxlanıldı!" : "💾 Hədləri Yadda Saxla"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── FACTORY MAP COMPONENT ───────────────────────────────────────────────────
 function FactoryMap() {
   const [equips, setEquips] = useState<EquipItem[]>(generateEquipData());
@@ -1746,6 +2058,10 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sensor, setSensor] = useState<SensorData>(generateSensorData());
   const [history, setHistory] = useState<HistoryEntry[]>(mockHistory);
+  const [thresholds, setThresholds] = useState<AlertThreshold>(() => loadThresholds());
+  const [alertHistory, setAlertHistory] = useState<AlertEvent[]>(() => loadAlertHistory());
+  const [activeAlerts, setActiveAlerts] = useState<AlertEvent[]>([]);
+  const sentRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -1755,6 +2071,36 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
         const next = [...prev, { time: s.timestamp, energy: s.energy, water: s.water, co2: s.co2 }];
         return next.slice(-20);
       });
+      const currentThresholds = loadThresholds();
+      const equips = generateEquipData();
+      const violations = checkAlerts(equips, currentThresholds);
+      if (violations.length > 0) {
+        const now = Date.now();
+        const newEvents: AlertEvent[] = [];
+        for (const v of violations) {
+          const key = `${v.equipmentId}:${v.paramName}`;
+          const lastSeen = sentRef.current.get(key) ?? 0;
+          if (now - lastSeen > 30_000) {
+            sentRef.current.set(key, now);
+            const ev: AlertEvent = { ...v, id: `${key}-${now}`, timestamp: new Date().toLocaleString("az-AZ"), telegramSent: false };
+            newEvents.push(ev);
+            fetch("/api/alerts/telegram", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ equipmentName: v.equipmentName, paramName: v.paramName, currentValue: v.currentValue, threshold: v.threshold, severity: v.severity }),
+            }).catch(() => {});
+          }
+        }
+        if (newEvents.length > 0) {
+          setAlertHistory(prev => {
+            const updated = [...newEvents, ...prev].slice(0, 100);
+            try { localStorage.setItem("gf_alerts", JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+          setActiveAlerts(newEvents);
+          setTimeout(() => setActiveAlerts([]), 20_000);
+        }
+      }
     }, 3000);
     return () => clearInterval(t);
   }, []);
@@ -1775,6 +2121,7 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
     { id: "map", label: "Fabrik Xəritəsi", icon: <IconMap/>, section: "Analitika" },
     { id: "carbon", label: "Karbon Kalk.", icon: <IconBarChart/>, section: "Analitika" },
     { id: "reports", label: "Hesabatlar", icon: <IconBarChart/>, section: "Analitika" },
+    { id: "security", label: "Təhlükəsizlik", icon: <IconShield/>, section: "Sistem" },
     { id: "settings", label: "Ayarlar", icon: <IconSettings/>, section: "Sistem" },
   ];
 
@@ -1870,6 +2217,14 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
         </div>
 
         {activePage === "map" && <FactoryMap/>}
+        {activePage === "security" && (
+          <SecurityAlerts
+            isAdmin={!!user.isAdmin}
+            thresholds={thresholds}
+            setThresholds={setThresholds}
+            alertHistory={alertHistory}
+          />
+        )}
         {activePage === "overview" && (
           <div className="gf-page">
             <div className="dash-header">
@@ -1880,10 +2235,15 @@ function Dashboard({ user, onLogout, theme, setTheme }: { user: User; onLogout: 
               <div className="live-badge"><div className="live-dot"/>Canlı</div>
             </div>
 
-            {highEnergy && (
-              <div className="alert-banner">
+            {(activeAlerts.length > 0 || highEnergy) && (
+              <div className="alert-banner" onClick={() => setActivePage("security")} style={{cursor:"pointer"}}>
                 <div className="alert-dot"/>
-                <div className="alert-text">Enerji sərfiyyatı kritik həddə çatıb: {sensor.energy} kWh — Dərhal yoxlayın</div>
+                <div className="alert-text">
+                  {activeAlerts.length > 0
+                    ? `⚠️ ${activeAlerts.length} yeni xəbərdarlıq: ${activeAlerts[0].equipmentName} — ${activeAlerts[0].paramName}: ${activeAlerts[0].currentValue}`
+                    : `Enerji sərfiyyatı kritik həddə çatıb: ${sensor.energy} kWh — Dərhal yoxlayın`}
+                </div>
+                <span style={{marginLeft:"auto",fontSize:11,opacity:0.75,flexShrink:0}}>→ Təhlükəsizlik</span>
               </div>
             )}
 

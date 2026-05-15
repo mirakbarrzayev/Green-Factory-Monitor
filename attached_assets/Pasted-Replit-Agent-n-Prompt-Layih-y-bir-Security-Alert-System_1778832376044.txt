@@ -1,0 +1,26 @@
+Replit Agent üçün Prompt:
+"Layihəyə bir 'Security & Alert System' modulu əlavə et. Bu sistem aşağıdakı funksiyalara sahib olmalıdır:
+
+Threshold (Hədd) Monitorinqi: Hər bir avadanlıq üçün (Turbin, Qazanxana və s.) maksimum enerji və yanacaq sərfiyyatı hədləri təyin et. Məsələn, Enerji > 500 kWh və ya Yanacaq > 20L/saat olduqda sistem 'Kritik' vəziyyətə keçsin.
+
+Dashboard Xəbərdarlığı: Sərfiyyat bu həddi keçdikdə, Dashboard-da və xəritədə həmin avadanlığın rəngi qırmızıya çevrilsin və ekranda 'Yüksək Sərfiyyat Xəbərdarlığı' çıxsın.
+
+Telegram Bildirişi: Sistem hər hansı bir kritik sərfiyyat aşkar etdikdə, avtomatik olaraq rəhbərliyin (müəyyən edilmiş ID) telefonuna Telegram vasitəsilə mesaj göndərsin. Mesajın məzmunu belə olsun: '⚠️ DİQQƏT: [Avadanlıq Adı] yüksək sərfiyyat qeydə aldı! Cari dəyər: [Dəyər]'.
+
+Kod Strukturu: Bu xəbərdarlıq funksiyasını check_alerts() adlı funksiya daxilində yaz və hər data yeniləndikdə bu funksiyanı çağır. Telegram üçün python-telegram-bot kitabxanasından və .env faylında saxlanılan BOT_TOKEN və CHAT_ID-dən istifadə et."
+
+Bu sistemi qurarkən bilməli olduğun vacib məqamlar:
+1. Telegram Bot Yaradılması:
+Bu mesajların gəlməsi üçün əvvəlcə BotFather-dan bir bot yaratmalı və onun Token-ini almalısan. Replit Agent-ə "Mənə Telegram bot tokenini hara qoyacağımı göstər" desən, o sənə Secrets (Environment Variables) hissəsini göstərəcək.
+
+2. Alert (Xəbərdarlıq) Məntiqi:
+Sistem arxa planda belə işləyəcək:
+
+3. Təhlükəsizlik (Security) Hissəsi:
+IT tələbəsi olduğun üçün layihəyə bu detalı da əlavə etməyin yaxşı olar:
+
+Loglama: Hər bir xəbərdarlıq mesajı eyni zamanda verilənlər bazasında alerts_history cədvəlinə yazılsın (nə vaxt, hansı avadanlıq, hansı dəyər).
+
+Giriş İcazəsi: Xəbərdarlıq hədlərini (məsələn, 500-ü 600 etmək) yalnız "Admin" statuslu istifadəçilər dəyişə bilsin.
+
+Məsləhət: Replit Agent-ə bu promptu verdikdən sonra o səndən Telegram Token istəyəcək. Həmin tokeni kodun içinə yazma, Replit-in sol tərəfindəki "Secrets" (kilit şəkli) bölməsinə əlavə et ki, kimsə koduna baxanda sənin botunu ələ keçirməsin.
