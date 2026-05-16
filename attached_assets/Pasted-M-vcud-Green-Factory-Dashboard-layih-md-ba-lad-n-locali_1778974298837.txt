@@ -1,0 +1,29 @@
+Mövcud "Green Factory Dashboard" layihəmdə başladığın localization (çoxdilli sistem) işini davam etdirərək, aşağıda qeyd olunan 3 kritik xətanı düzəlt, 1 böyük yeniliyi inteqrasiya et və tam kod auditini icra edərək tətbiqi yenidən başlad:
+
+1. ❌ GÖZƏ ÇARPAN 3 KRİTİK XƏTANIN NÖQTƏ-BƏ-NÖQTƏ DÜZƏLDİLMƏSİ
+
+- Giriş (Login) Səhifəsində Dil Probleminin Həlli: 
+  Dil seçim elementini (st.selectbox) yalnız daxili paneldə deyil, İLK AÇILIŞDA — yəni hələ istifadəçi daxil olmamışdan qabaq Login/Register səhifəsinin ən yuxarı hissəsinə yerləşdir. İstifadəçi daxil olmamışdan qabaq buradan dili dəyişdiyi an sistem dərhal st.rerun() etsin və həm login pəncərəsi, həm də daxildəki bütün panellər tamamilə həmin seçilmiş dilə uyğunlaşsın.
+
+- Sidebar Scroll Sıçraması (Scroll Jump Fix): 
+  Sol paneldə (sidebar) hər hansı bir menyuya, taba və ya dilə kliklədikdə skrolun avtomatik olaraq ən başa fırlanması xətasını aradan qaldır. Bunun üçün sidebar daxilindəki bütün widget və naviqasiya elementlərinə sabit, təkrarlanmayan "key=" parametrləri təyin et. Skrol mövqeyini kilidləmək üçün Streamlit session_state mexanizmini və ya xüsusi CSS injection ([data-testid="stSidebarUserContent"] { scroll-behavior: smooth; }) metodunu tətbiq et. Sürüşdürmə çubuğunun (scrollbar) dizaynını incəldərək sənaye tünd-yaşıl üslubuna uyğunlaşdır.
+
+- "Haqqında" (About) Blokundakı Artıq Mətnin Silinməsi: 
+  "Haqqında" bölməsində yer alan və ekranda başlıq olaraq "TEKNOLOGIYA", altındakı mətn olaraq isə "React 18 + TypeScript" yazılan qutu/kart elementini koddan tamamilə sil. Bu bloku təmizləyərkən onun ətrafındakı digər kartların (Versiya: 1.2.0, Lisenziya: MIT Open Source, Son Yeniləmə: May 2026, Müəllif: Green Factory Team) vizual düzülüşünü, grid strukturunu və dizaynını səliqəli şəkildə qoru.
+
+2. ✨ 1 VACİB YENİLİYİN ƏLAVƏ EDİLMƏSİ (HƏFTƏLİK NÖVBƏLİ ENERJİ VƏ RESURS ANALİZİ)
+
+- Verilənlər Bazası Təkmilləşdirilməsi: 
+  "weekly_resource_reports" SQLite cədvəlinə mövcud resurslarla yanaşı, növbəlik enerji analizini qorumaq üçün "shift_morning_kwh", "shift_afternoon_kwh" və "shift_night_kwh" sütunlarını əlavə et/yenilə.
+- Həftə Sonu Yenilənmə və Avtomatik Reset Məntiqi: 
+  Sistem cari təqvim həftəsini avtomatik izləsin. Hər həftənin sonu (Bazar günü) tamamlandıqda və ya yeni təqvim həftəsinə keçdikdə, daxil edilmiş növbəli enerji və resurs məlumatları bazaya arxivlənsin, ana ekrandakı növbəli göstəricilər isə yeni həftə üçün avtomatik sıfırlansın (reset/yenilənsin). Əgər cari təqvim həftəsi üzrə bazada artıq məlumat varsa, təkrar daxiletməni blokla və üzərinə yazma icazəsini yalnız "Admin" roluna ver.
+- Dinamik Növbə Qrafikləri: 
+  Səhər (08:00-16:00), Günorta (16:00-00:00) və Gecə (00:00-08:00) növbələrinin enerji sərfiyyat trendini bazadan çəkərək vizuallaşdıran dinamik Plotly xətt/bar qrafiklərini qur. Bu qrafiklərin bütün mətnləri sənaye dark-green üslubunda və seçilən dilə tam uyğun olmalıdır.
+
+3. 🔍 TAM TƏRCÜMƏ AUDİTİ VƏ 100% SƏRT KONTROL (FULL TRANSLATION AUDIT)
+
+- Kodun daxilində (Giriş səhifəsi, daxiletmə sahələrinin placeholder yazıları, tab adları, düymələr, Plotly qrafiklərinin başlıqları ilə ox etiketləri, st.error/st.success/st.warning xəbərdarlıq qutuları, form mətnləri və alt yazılar daxil olmaqla) mövcud olan BÜTÜN sətirləri (strings) tək-tək skan et.
+- Seçilən dildə ("🇦🇿 Azərbaycan", "🇬🇧 English", "🇹🇷 Türkçe") tərcümə olunmayan, diqqətdən qaçan və ya köhnə koddun içində sabit (hardcoded) şəkildə qalan tək bir söz, abreviatura və ya cümlə belə QALMAMALIDIR.
+- Əgər mərkəzi "languages" lüğətində qarşılığı tapılmayan hər hansı bir ingilis və ya azərbaycan dilində sabit mətn aşkarlasan, onu dərhal lüğətə yeni bir unikal açar (key) olaraq daxil et və hər 3 dil üçün tam tərcüməsini yazaraq interfeysə dinamik şəkildə bağla.
+
+Bu təlimat paketini tam hazır şəkildə koda tətbiq et, bütün testləri tamamla və sistemi qüsursuz vəziyyətdə işə sal!

@@ -165,6 +165,11 @@ const LANGUAGES = {
     weekly_admin_override: "Admin olaraq üzərindən yaz",
     weekly_saved: "✅ Məlumatlar uğurla saxlanıldı!",
     weekly_trend: "Həftəlik Resurs Trendi",
+    weekly_shift_trend: "Həftəlik Növbə Enerji Trendi",
+    weekly_shift_section: "Növbə Üzrə Enerji (kWh)",
+    weekly_shift_morning: "Səhər Növbəsi (kWh)",
+    weekly_shift_afternoon: "Günorta Növbəsi (kWh)",
+    weekly_shift_night: "Gecə Növbəsi (kWh)",
     weekly_no_data: "Hələ məlumat yoxdur. Yuxarıdakı formu doldurun.",
     week_label: "Həftə",
     // Security
@@ -409,6 +414,11 @@ const LANGUAGES = {
     weekly_admin_override: "Admin: Overwrite",
     weekly_saved: "✅ Data saved successfully!",
     weekly_trend: "Weekly Resource Trend",
+    weekly_shift_trend: "Weekly Shift Energy Trend",
+    weekly_shift_section: "Energy by Shift (kWh)",
+    weekly_shift_morning: "Morning Shift (kWh)",
+    weekly_shift_afternoon: "Afternoon Shift (kWh)",
+    weekly_shift_night: "Night Shift (kWh)",
     weekly_no_data: "No data yet. Fill in the form above.",
     week_label: "Week",
     page_security: "Security & Alerts",
@@ -647,6 +657,11 @@ const LANGUAGES = {
     weekly_admin_override: "Admin: Üzerine Yaz",
     weekly_saved: "✅ Veriler başarıyla kaydedildi!",
     weekly_trend: "Haftalık Kaynak Trendi",
+    weekly_shift_trend: "Haftalık Vardiya Enerji Trendi",
+    weekly_shift_section: "Vardiyaya Göre Enerji (kWh)",
+    weekly_shift_morning: "Sabah Vardiyası (kWh)",
+    weekly_shift_afternoon: "Öğleden Sonra Vardiyası (kWh)",
+    weekly_shift_night: "Gece Vardiyası (kWh)",
     weekly_no_data: "Henüz veri yok. Yukarıdaki formu doldurun.",
     week_label: "Hafta",
     page_security: "Güvenlik & Uyarılar",
@@ -806,6 +821,9 @@ interface WeeklyReport {
   gas_m3: number;
   fuel_liters: number;
   co2_emissions: number;
+  shift_morning_kwh: number;
+  shift_afternoon_kwh: number;
+  shift_night_kwh: number;
   saved_at: string;
 }
 interface SupportTicket {
@@ -1301,7 +1319,11 @@ const gfStyles = `
   }
   .sidebar-logo span { font-family: var(--font-head); font-size: 16px; font-weight: 800; color: var(--text); }
   .sidebar-logo span em { color: var(--green); font-style: normal; }
-  .nav-section { padding: 0 12px; flex: 1; overflow-y: auto; }
+  .nav-section { padding: 0 12px; flex: 1; overflow-y: auto; scroll-behavior: smooth; overflow-anchor: none; }
+  .nav-section::-webkit-scrollbar { width: 4px; }
+  .nav-section::-webkit-scrollbar-track { background: transparent; }
+  .nav-section::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  .nav-section::-webkit-scrollbar-thumb:hover { background: var(--green); }
   .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 20px; }
   .nav-item {
     display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px;
@@ -1869,27 +1891,98 @@ function LineChartSVG({ data, color }: { data: number[]; color: string }) {
 }
 
 function WeeklyTrendChart({ reports, t }: { reports: WeeklyReport[]; t: T }) {
+  const [activeView, setActiveView] = useState<"resources"|"shifts">("resources");
   if (reports.length < 2) return null;
-  const sorted = [...reports].sort((a, b) => a.week_number - b.week_number);
-  const maxE = Math.max(...sorted.map(r => r.energy_kwh), 1);
-  const maxW = Math.max(...sorted.map(r => r.water_m3), 1);
-  const W = 400, H = 140, PAD = 12;
+  const sorted = [...reports].sort((a, b) => a.week_number === b.week_number ? a.year - b.year : a.week_number - b.week_number);
+  const W = 400, H = 150, PAD = 14;
   const mkPath = (vals: number[], max: number) => {
-    const pts = vals.map((v, i) => ({ x: PAD + (i / (vals.length - 1)) * (W - 2*PAD), y: H - PAD - (v / max) * (H - 2*PAD) }));
+    if (vals.length < 2) return "";
+    const pts = vals.map((v, i) => ({
+      x: PAD + (i / (vals.length - 1)) * (W - 2 * PAD),
+      y: H - PAD - ((v || 0) / max) * (H - 2 * PAD),
+    }));
     return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
   };
-  const energyPath = mkPath(sorted.map(r => r.energy_kwh), maxE);
-  const waterPath = mkPath(sorted.map(r => r.water_m3), maxW);
+  const mkArea = (vals: number[], max: number) => {
+    if (vals.length < 2) return "";
+    const pts = vals.map((v, i) => ({ x: PAD + (i / (vals.length - 1)) * (W - 2 * PAD), y: H - PAD - ((v || 0) / max) * (H - 2 * PAD) }));
+    return `${pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ")} L ${pts[pts.length-1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z`;
+  };
+  const labels = sorted.map(r => `${t.week_label} ${r.week_number}`);
+  const labelStep = Math.max(1, Math.ceil(labels.length / 6));
+  // Resources view
+  const maxE = Math.max(...sorted.map(r => r.energy_kwh || 0), 1);
+  const maxW = Math.max(...sorted.map(r => r.water_m3 || 0), 1);
+  const energyPath = mkPath(sorted.map(r => r.energy_kwh || 0), maxE);
+  const waterPath = mkPath(sorted.map(r => r.water_m3 || 0), maxW);
+  const energyArea = mkArea(sorted.map(r => r.energy_kwh || 0), maxE);
+  // Shifts view
+  const allShifts = sorted.flatMap(r => [r.shift_morning_kwh || 0, r.shift_afternoon_kwh || 0, r.shift_night_kwh || 0]);
+  const maxS = Math.max(...allShifts, 1);
+  const mornPath = mkPath(sorted.map(r => r.shift_morning_kwh || 0), maxS);
+  const aftPath = mkPath(sorted.map(r => r.shift_afternoon_kwh || 0), maxS);
+  const nightPath = mkPath(sorted.map(r => r.shift_night_kwh || 0), maxS);
+
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:"100%",height:180}}>
-        <path d={energyPath} fill="none" stroke="var(--amber)" strokeWidth="2" strokeLinecap="round"/>
-        <path d={waterPath} fill="none" stroke="var(--blue)" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-      <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:8,fontSize:12,color:"var(--text3)"}}>
-        <span style={{color:"var(--amber)"}}>■ {t.weekly_energy}</span>
-        <span style={{color:"var(--blue)"}}>■ {t.weekly_water}</span>
+      {/* Tab switcher */}
+      <div style={{display:"flex",gap:4,marginBottom:12}}>
+        {([["resources", t.weekly_trend],["shifts", t.weekly_shift_trend]] as const).map(([v, lbl]) => (
+          <button key={v} onClick={() => setActiveView(v)} style={{padding:"6px 14px",borderRadius:6,border:"1px solid",fontSize:12,fontWeight:600,cursor:"pointer",
+            borderColor: activeView === v ? "var(--green)" : "var(--border)",
+            background: activeView === v ? "rgba(0,232,122,0.1)" : "var(--card)",
+            color: activeView === v ? "var(--green)" : "var(--text2)"}}>
+            {lbl}
+          </button>
+        ))}
       </div>
+
+      {activeView === "resources" ? (
+        <div>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:"100%",height:160,display:"block"}}>
+            <defs>
+              <linearGradient id="wk-eg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--amber)" stopOpacity="0.25"/>
+                <stop offset="100%" stopColor="var(--amber)" stopOpacity="0"/>
+              </linearGradient>
+            </defs>
+            {/* Grid lines */}
+            {[0.25,0.5,0.75,1].map(f => (
+              <line key={f} x1={PAD} y1={PAD + (1-f)*(H-2*PAD)} x2={W-PAD} y2={PAD + (1-f)*(H-2*PAD)} stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+            ))}
+            <path d={energyArea} fill="url(#wk-eg)"/>
+            <path d={energyPath} fill="none" stroke="var(--amber)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d={waterPath} fill="none" stroke="var(--blue)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 3"/>
+            {/* X-axis labels */}
+            {sorted.map((r, i) => i % labelStep === 0 && (
+              <text key={i} x={PAD + (i / (sorted.length - 1)) * (W - 2*PAD)} y={H - 1} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.3)" fontFamily="system-ui">{`W${r.week_number}`}</text>
+            ))}
+          </svg>
+          <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:8,fontSize:12,color:"var(--text3)",flexWrap:"wrap"}}>
+            <span style={{color:"var(--amber)"}}>── {t.weekly_energy}</span>
+            <span style={{color:"var(--blue)"}}>╌╌ {t.weekly_water}</span>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:"100%",height:160,display:"block"}}>
+            {[0.25,0.5,0.75,1].map(f => (
+              <line key={f} x1={PAD} y1={PAD + (1-f)*(H-2*PAD)} x2={W-PAD} y2={PAD + (1-f)*(H-2*PAD)} stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+            ))}
+            <path d={mornPath} fill="none" stroke="var(--amber)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d={aftPath} fill="none" stroke="var(--green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d={nightPath} fill="none" stroke="var(--purple)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            {sorted.map((r, i) => i % labelStep === 0 && (
+              <text key={i} x={PAD + (i / (sorted.length - 1)) * (W - 2*PAD)} y={H - 1} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.3)" fontFamily="system-ui">{`W${r.week_number}`}</text>
+            ))}
+          </svg>
+          <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:8,fontSize:12,color:"var(--text3)",flexWrap:"wrap"}}>
+            <span style={{color:"var(--amber)"}}>── {t.shift_morning}</span>
+            <span style={{color:"var(--green)"}}>── {t.shift_afternoon}</span>
+            <span style={{color:"var(--purple)"}}>── {t.shift_night}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2017,7 +2110,7 @@ function AuthScreen({ onLogin, lang, setLang }: { onLogin: (u: User) => void; la
           <span>Green<em>Factory</em></span>
         </div>
         <h1 className="onboard-headline">
-          {t.headline1}<br/>Daha <span>{t.headline2.replace("Daha ","")}</span><br/>{t.headline3}
+          {t.headline1}<br/><span>{t.headline2}</span><br/>{t.headline3}
         </h1>
         <p className="onboard-sub">{t.hero_sub}</p>
         <div className="feature-list">
@@ -2413,7 +2506,7 @@ function SettingsPage({ user, theme, setTheme, t }: { user: User; theme: string;
           <div className="about-version">v1.2</div>
           <div className="about-desc">{t.about_desc}</div>
           <div className="about-grid">
-            {[["Versiya", "1.2.0"],["Texnologiya","React 18 + TypeScript"],["Lisenziya","MIT Open Source"],["Son Yeniləmə","May 2026"],["Müəllif","Green Factory Team"],["Platform","Web (PWA hazır)"]].map(([label, val], i) => (
+            {[["Versiya", "1.2.0"],["Lisenziya","MIT Open Source"],["Son Yeniləmə","May 2026"],["Müəllif","Green Factory Team"],["Platform","Web (PWA hazır)"]].map(([label, val], i) => (
               <div className="about-item" key={i}><div className="about-item-label">{label}</div><div className="about-item-val">{val}</div></div>
             ))}
           </div>
@@ -2563,7 +2656,7 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
   const [reports, setReports] = useState<WeeklyReport[]>(() => loadWeeklyReports());
-  const [form, setForm] = useState({ energy: "", water: "", gas: "", fuel: "" });
+  const [form, setForm] = useState({ energy: "", water: "", gas: "", fuel: "", shift_morning: "", shift_afternoon: "", shift_night: "" });
   const [toast, setToast] = useState<{msg:string;type:"error"|"success"}|null>(null);
   const [adminOverride, setAdminOverride] = useState(false);
 
@@ -2574,18 +2667,22 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
   );
 
   const existingEntry = reports.find(r => r.week_number === currentWeek && r.year === currentYear);
-  const canEnter = !existingEntry || (isAdmin && adminOverride);
 
   const handleSave = () => {
     try {
+      const totalShift = parseFloat(form.shift_morning || "0") + parseFloat(form.shift_afternoon || "0") + parseFloat(form.shift_night || "0");
+      const energyVal = parseFloat(form.energy || "0") || totalShift;
       const newReport: WeeklyReport = {
         week_number: currentWeek,
         year: currentYear,
-        energy_kwh: parseFloat(form.energy || "0"),
+        energy_kwh: energyVal,
         water_m3: parseFloat(form.water || "0"),
         gas_m3: parseFloat(form.gas || "0"),
         fuel_liters: parseFloat(form.fuel || "0"),
         co2_emissions: +co2Calc.toFixed(2),
+        shift_morning_kwh: parseFloat(form.shift_morning || "0"),
+        shift_afternoon_kwh: parseFloat(form.shift_afternoon || "0"),
+        shift_night_kwh: parseFloat(form.shift_night || "0"),
         saved_at: new Date().toLocaleString("az-AZ"),
       };
       const updated = existingEntry
@@ -2593,7 +2690,7 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
         : [...reports, newReport];
       setReports(updated);
       saveWeeklyReports(updated);
-      setForm({ energy: "", water: "", gas: "", fuel: "" });
+      setForm({ energy: "", water: "", gas: "", fuel: "", shift_morning: "", shift_afternoon: "", shift_night: "" });
       setAdminOverride(false);
       setToast({ msg: t.weekly_saved, type: "success" });
     } catch { setToast({ msg: t.auth_error, type: "error" }); }
@@ -2604,7 +2701,7 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)}/>}
       <div className="dash-header">
         <div>
-          <div className="dash-title">Həftəlik <span>Hesabatlar</span></div>
+          <div className="dash-title">{t.nav_weekly}</div>
           <div style={{fontSize:13,color:"var(--text2)",marginTop:4}}>{t.weekly_sub}</div>
         </div>
         <div className="live-badge"><IconCalendar/> {t.weekly_current_week}: {t.week_label} {currentWeek}, {currentYear}</div>
@@ -2629,6 +2726,7 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
           </div>
         ) : (
           <div className="weekly-form">
+            {/* Resource inputs */}
             <div className="weekly-grid">
               {([["energy", t.weekly_energy],["water", t.weekly_water],["gas", t.weekly_gas],["fuel", t.weekly_fuel]] as const).map(([field, label]) => (
                 <div key={field} className="weekly-field">
@@ -2636,6 +2734,18 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
                   <input className="weekly-input" type="number" min="0" placeholder="0" value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))}/>
                 </div>
               ))}
+            </div>
+            {/* Shift energy section */}
+            <div style={{marginTop:16,padding:"14px 16px",background:"var(--card2)",borderRadius:10,border:"1px solid var(--border)"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:12}}>{t.weekly_shift_section}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                {([["shift_morning", t.weekly_shift_morning, "var(--amber)"],["shift_afternoon", t.weekly_shift_afternoon, "var(--green)"],["shift_night", t.weekly_shift_night, "var(--purple)"]] as const).map(([field, label, color]) => (
+                  <div key={field} className="weekly-field">
+                    <label className="weekly-label" style={{color}}>{label}</label>
+                    <input className="weekly-input" type="number" min="0" placeholder="0" value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))}/>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="weekly-co2-result">
               <div>
@@ -2659,16 +2769,25 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
           <div>
             <WeeklyTrendChart reports={reports} t={t}/>
             <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:6}}>
-              {[...reports].sort((a,b)=>b.week_number - a.week_number).map((r, i) => (
-                <div key={i} className="weekly-report-row">
-                  <div className="weekly-report-week">{t.week_label} {r.week_number}</div>
+              {[...reports].sort((a,b) => b.year !== a.year ? b.year - a.year : b.week_number - a.week_number).map((r, i) => (
+                <div key={i} className="weekly-report-row" style={{flexDirection:"column",gap:8,alignItems:"stretch"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div className="weekly-report-week">{t.week_label} {r.week_number}, {r.year}</div>
+                    <div style={{fontSize:11,color:"var(--text3)"}}>{r.saved_at}</div>
+                  </div>
                   <div className="weekly-report-vals">
                     <span className="weekly-report-val">⚡ <strong>{r.energy_kwh}</strong> kWh</span>
                     <span className="weekly-report-val">💧 <strong>{r.water_m3}</strong> m³</span>
                     <span className="weekly-report-val">🔥 <strong>{r.gas_m3}</strong> m³</span>
                     <span className="weekly-report-val">🌿 <strong>{r.co2_emissions}</strong> kg CO₂</span>
                   </div>
-                  <div style={{fontSize:11,color:"var(--text3)",flexShrink:0}}>{r.saved_at}</div>
+                  {(r.shift_morning_kwh || r.shift_afternoon_kwh || r.shift_night_kwh) ? (
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"rgba(251,191,36,0.12)",color:"var(--amber)"}}>🌅 {r.shift_morning_kwh} kWh</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"rgba(0,232,122,0.1)",color:"var(--green)"}}>☀️ {r.shift_afternoon_kwh} kWh</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"rgba(139,92,246,0.12)",color:"var(--purple)"}}>🌙 {r.shift_night_kwh} kWh</span>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
