@@ -1,0 +1,42 @@
+Replit Agent, sol panel skrolunun tam kilidlənməsi, növbəli analiz bölməsinin yerinin dəyişdirilməsi və vizual məlumat yenilənməsi üçün aşağıdakı yekun düzəlişləri sistemə tam inteqrasiya et:
+
+1. ❌ SOL PANELİN (SIDEBAR) SKROL PROBLEMİNİN 100% HƏLLİ (OVERFLOW-ANCHOR)
+- Səhifə yenilənən zaman sol panelin az da olsa yuxarı sıçramasını tamamilə aradan qaldırmaq üçün st.set_page_config-dən dərhal sonra yerləşən mövcud CSS injection blokunu sil və yerinə dəqiq bu CSS kodunu yerləşdir:
+
+st.markdown("""
+    <style>
+        /* Sidebar daxilində skrol mövqeyini brauzer səviyyəsində məcburi kilidləyirik */
+        [data-testid="stSidebarUserContent"] {
+            scroll-behavior: smooth !important;
+            overflow-anchor: auto !important;
+        }
+        [data-testid="stSidebarUserContent"] > div:first-child {
+            overflow-anchor: auto !important;
+        }
+        /* Sənaye üslublu incə dark-green skrol dizaynı */
+        [data-testid="stSidebarUserContent"]::-webkit-scrollbar {
+            width: 6px;
+        }
+        [data-testid="stSidebarUserContent"]::-webkit-scrollbar-track {
+            background: #0E1117; 
+        }
+        [data-testid="stSidebarUserContent"]::-webkit-scrollbar-thumb {
+            background: #1E5631; 
+            border-radius: 3px;
+        }
+        [data-testid="stSidebarUserContent"]::-webkit-scrollbar-thumb:hover {
+            background: #4C9A2A; 
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+- Sol paneldəki dil seçimi (st.selectbox) və digər elementlərin "key=" parametrlərinin tam unikal və sabit olduğundan əmin ol (Məsələn: key="sidebar_language_final", key="sidebar_nav_final").
+
+2. 📊 HƏFTƏLİK NÖVBƏLİ ENERJİ ANALİZİNİN DOĞRU YERƏ YERLƏŞDİRİLMƏSİ
+- Səhifə idarəetməsindəki "Həftəlik Hesabatlar" tabından növbəli enerji analizi modulunu çıxar.
+- Həftəlik olaraq Səhər, Günorta və Gecə növbələrinin enerji məlumatlarının daxil edildiyi st.form elementini və bununla bağlı arxivlənən verilənlər bazasından yaranan Plotly trend qrafiklərini birbaşa mövcud olan "Enerji Sərfiyyatı" (Energy Consumption) tabının/bölməsinin daxilinə (alt hissəyə) yerləşdir. Bu hissədəki hər bir mətn və düymə mərkəzi "languages" lüğətinə bağlansın.
+
+3. 🏷️ "HAQQINDA" BÖLMƏSİNDƏ MÜƏLLİF ADININ YENİLƏNMƏSİ
+- "Haqqında" (About) panelindəki ən alt kartda yer alan MÜƏLLİF (Author) hissəsində köhnə yazılmış "Green Factory Team" mətnini tamamilə sil və yerinə böyük hərflərlə "GREEN PLUS" yaz (Bu mətn də mərkəzi lüğətdə dil seçiminə görə qorunmalıdır).
+
+Bütün bu düzəlişləri mövcud arxitekturanı zədələmədən koda tətbiq et və tətbiqi tam işlək vəziyyətdə yenidən başlad!

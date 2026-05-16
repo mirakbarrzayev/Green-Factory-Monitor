@@ -172,6 +172,7 @@ const LANGUAGES = {
     weekly_shift_night: "Gecə Növbəsi (kWh)",
     weekly_no_data: "Hələ məlumat yoxdur. Yuxarıdakı formu doldurun.",
     week_label: "Həftə",
+    about_author: "GREEN PLUS",
     // Security
     page_security: "Təhlükəsizlik & Alertlər",
     security_sub: "Threshold monitorinqi — real vaxt xəbərdarlıq sistemi",
@@ -421,6 +422,7 @@ const LANGUAGES = {
     weekly_shift_night: "Night Shift (kWh)",
     weekly_no_data: "No data yet. Fill in the form above.",
     week_label: "Week",
+    about_author: "GREEN PLUS",
     page_security: "Security & Alerts",
     security_sub: "Threshold monitoring — real-time alert system",
     total_alerts: "Total Alerts",
@@ -664,6 +666,7 @@ const LANGUAGES = {
     weekly_shift_night: "Gece Vardiyası (kWh)",
     weekly_no_data: "Henüz veri yok. Yukarıdaki formu doldurun.",
     week_label: "Hafta",
+    about_author: "GREEN PLUS",
     page_security: "Güvenlik & Uyarılar",
     security_sub: "Eşik izleme — gerçek zamanlı uyarı sistemi",
     total_alerts: "Toplam Uyarı",
@@ -1319,7 +1322,7 @@ const gfStyles = `
   }
   .sidebar-logo span { font-family: var(--font-head); font-size: 16px; font-weight: 800; color: var(--text); }
   .sidebar-logo span em { color: var(--green); font-style: normal; }
-  .nav-section { padding: 0 12px; flex: 1; overflow-y: auto; scroll-behavior: smooth; overflow-anchor: none; }
+  .nav-section { padding: 0 12px; flex: 1; overflow-y: auto; scroll-behavior: smooth !important; overflow-anchor: auto !important; }
   .nav-section::-webkit-scrollbar { width: 4px; }
   .nav-section::-webkit-scrollbar-track { background: transparent; }
   .nav-section::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
@@ -2506,7 +2509,7 @@ function SettingsPage({ user, theme, setTheme, t }: { user: User; theme: string;
           <div className="about-version">v1.2</div>
           <div className="about-desc">{t.about_desc}</div>
           <div className="about-grid">
-            {[["Versiya", "1.2.0"],["Lisenziya","MIT Open Source"],["Son Yeniləmə","May 2026"],["Müəllif","Green Factory Team"],["Platform","Web (PWA hazır)"]].map(([label, val], i) => (
+            {([["Versiya", "1.2.0"],["Lisenziya","MIT Open Source"],["Son Yeniləmə","May 2026"],["Müəllif", t.about_author],["Platform","Web (PWA hazır)"]] as [string,string][]).map(([label, val], i) => (
               <div className="about-item" key={i}><div className="about-item-label">{label}</div><div className="about-item-val">{val}</div></div>
             ))}
           </div>
@@ -2656,7 +2659,7 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
   const currentWeek = getWeekNumber(now);
   const currentYear = now.getFullYear();
   const [reports, setReports] = useState<WeeklyReport[]>(() => loadWeeklyReports());
-  const [form, setForm] = useState({ energy: "", water: "", gas: "", fuel: "", shift_morning: "", shift_afternoon: "", shift_night: "" });
+  const [form, setForm] = useState({ energy: "", water: "", gas: "", fuel: "" });
   const [toast, setToast] = useState<{msg:string;type:"error"|"success"}|null>(null);
   const [adminOverride, setAdminOverride] = useState(false);
 
@@ -2670,19 +2673,17 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
 
   const handleSave = () => {
     try {
-      const totalShift = parseFloat(form.shift_morning || "0") + parseFloat(form.shift_afternoon || "0") + parseFloat(form.shift_night || "0");
-      const energyVal = parseFloat(form.energy || "0") || totalShift;
       const newReport: WeeklyReport = {
         week_number: currentWeek,
         year: currentYear,
-        energy_kwh: energyVal,
+        energy_kwh: parseFloat(form.energy || "0"),
         water_m3: parseFloat(form.water || "0"),
         gas_m3: parseFloat(form.gas || "0"),
         fuel_liters: parseFloat(form.fuel || "0"),
         co2_emissions: +co2Calc.toFixed(2),
-        shift_morning_kwh: parseFloat(form.shift_morning || "0"),
-        shift_afternoon_kwh: parseFloat(form.shift_afternoon || "0"),
-        shift_night_kwh: parseFloat(form.shift_night || "0"),
+        shift_morning_kwh: existingEntry?.shift_morning_kwh || 0,
+        shift_afternoon_kwh: existingEntry?.shift_afternoon_kwh || 0,
+        shift_night_kwh: existingEntry?.shift_night_kwh || 0,
         saved_at: new Date().toLocaleString("az-AZ"),
       };
       const updated = existingEntry
@@ -2690,7 +2691,7 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
         : [...reports, newReport];
       setReports(updated);
       saveWeeklyReports(updated);
-      setForm({ energy: "", water: "", gas: "", fuel: "", shift_morning: "", shift_afternoon: "", shift_night: "" });
+      setForm({ energy: "", water: "", gas: "", fuel: "" });
       setAdminOverride(false);
       setToast({ msg: t.weekly_saved, type: "success" });
     } catch { setToast({ msg: t.auth_error, type: "error" }); }
@@ -2734,18 +2735,6 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
                   <input className="weekly-input" type="number" min="0" placeholder="0" value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))}/>
                 </div>
               ))}
-            </div>
-            {/* Shift energy section */}
-            <div style={{marginTop:16,padding:"14px 16px",background:"var(--card2)",borderRadius:10,border:"1px solid var(--border)"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:12}}>{t.weekly_shift_section}</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-                {([["shift_morning", t.weekly_shift_morning, "var(--amber)"],["shift_afternoon", t.weekly_shift_afternoon, "var(--green)"],["shift_night", t.weekly_shift_night, "var(--purple)"]] as const).map(([field, label, color]) => (
-                  <div key={field} className="weekly-field">
-                    <label className="weekly-label" style={{color}}>{label}</label>
-                    <input className="weekly-input" type="number" min="0" placeholder="0" value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))}/>
-                  </div>
-                ))}
-              </div>
             </div>
             <div className="weekly-co2-result">
               <div>
@@ -3406,7 +3395,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
               <div className="panel-header"><div className="panel-title">{t.energy_timeline}</div></div>
               <div className="line-chart-wrap" style={{height:200}}><LineChartSVG data={energyHistory} color="var(--amber)"/></div>
             </div>
-            {/* Shift Analysis */}
+            {/* Live Shift Analysis */}
             <div className="panel">
               <div className="panel-header"><div className="panel-title">{t.shift_analysis}</div></div>
               <div className="shift-grid">
@@ -3423,6 +3412,8 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
                 ))}
               </div>
             </div>
+            {/* Weekly Shift Entry + Historical Trend */}
+            <EnergyShiftPanel isAdmin={isAdmin} t={t}/>
           </div>
         )}
 
@@ -3532,6 +3523,93 @@ function Particles() {
       {particles.map(p => (
         <div key={p.id} className="particle" style={{width: p.size, height: p.size, left: `${p.left}%`, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`}}/>
       ))}
+    </div>
+  );
+}
+
+// ─── ENERGY SHIFT PANEL ───────────────────────────────────────────────────────
+function EnergyShiftPanel({ isAdmin, t }: { isAdmin: boolean; t: T }) {
+  const now = new Date();
+  const currentWeek = getWeekNumber(now);
+  const currentYear = now.getFullYear();
+  const [reports, setReports] = useState<WeeklyReport[]>(() => loadWeeklyReports());
+  const [form, setForm] = useState({ morning: "", afternoon: "", night: "" });
+  const [override, setOverride] = useState(false);
+  const [toast, setToast] = useState<{msg:string;type:"error"|"success"}|null>(null);
+
+  const existing = reports.find(r => r.week_number === currentWeek && r.year === currentYear);
+  const hasShifts = !!(existing && (existing.shift_morning_kwh || existing.shift_afternoon_kwh || existing.shift_night_kwh));
+  const canEnter = !hasShifts || (isAdmin && override);
+
+  const handleShiftSave = () => {
+    try {
+      const morn = parseFloat(form.morning || "0");
+      const aft = parseFloat(form.afternoon || "0");
+      const night = parseFloat(form.night || "0");
+      const base: WeeklyReport = existing || {
+        week_number: currentWeek, year: currentYear,
+        energy_kwh: morn + aft + night, water_m3: 0, gas_m3: 0,
+        fuel_liters: 0, co2_emissions: 0,
+        shift_morning_kwh: 0, shift_afternoon_kwh: 0, shift_night_kwh: 0,
+        saved_at: new Date().toLocaleString("az-AZ"),
+      };
+      const updated_report: WeeklyReport = { ...base, shift_morning_kwh: morn, shift_afternoon_kwh: aft, shift_night_kwh: night, saved_at: new Date().toLocaleString("az-AZ") };
+      const updated = existing
+        ? reports.map(r => r.week_number === currentWeek && r.year === currentYear ? updated_report : r)
+        : [...reports, updated_report];
+      setReports(updated);
+      saveWeeklyReports(updated);
+      setForm({ morning: "", afternoon: "", night: "" });
+      setOverride(false);
+      setToast({ msg: t.weekly_saved, type: "success" });
+    } catch { setToast({ msg: t.auth_error, type: "error" }); }
+  };
+
+  return (
+    <div className="panel" style={{marginTop: 24}}>
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)}/>}
+      <div className="panel-header">
+        <div className="panel-title">{t.weekly_shift_section}</div>
+        <div style={{fontSize:12,color:"var(--green)"}}>{t.week_label} {currentWeek}, {currentYear}</div>
+      </div>
+
+      {/* Entry form */}
+      {!canEnter ? (
+        <div>
+          <div className="weekly-warn">{t.weekly_already}</div>
+          {isAdmin && (
+            <button className="weekly-override-btn" onClick={() => setOverride(true)}>{t.weekly_admin_override}</button>
+          )}
+          {/* Show current stored shift values */}
+          {existing && (
+            <div style={{display:"flex",gap:12,marginTop:12,flexWrap:"wrap"}}>
+              <span style={{fontSize:13,padding:"4px 12px",borderRadius:20,background:"rgba(251,191,36,0.12)",color:"var(--amber)"}}>🌅 {t.shift_morning}: <strong>{existing.shift_morning_kwh}</strong> kWh</span>
+              <span style={{fontSize:13,padding:"4px 12px",borderRadius:20,background:"rgba(0,232,122,0.1)",color:"var(--green)"}}>☀️ {t.shift_afternoon}: <strong>{existing.shift_afternoon_kwh}</strong> kWh</span>
+              <span style={{fontSize:13,padding:"4px 12px",borderRadius:20,background:"rgba(139,92,246,0.12)",color:"var(--purple)"}}>🌙 {t.shift_night}: <strong>{existing.shift_night_kwh}</strong> kWh</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+            {([["morning", t.weekly_shift_morning, "var(--amber)"],["afternoon", t.weekly_shift_afternoon, "var(--green)"],["night", t.weekly_shift_night, "var(--purple)"]] as const).map(([field, label, color]) => (
+              <div key={field} className="weekly-field">
+                <label className="weekly-label" style={{color}}>{label}</label>
+                <input className="weekly-input" type="number" min="0" placeholder="0" value={form[field]} onChange={e => setForm(p => ({...p, [field]: e.target.value}))}/>
+              </div>
+            ))}
+          </div>
+          <button className="weekly-save-btn" onClick={handleShiftSave}>{t.weekly_save}</button>
+        </div>
+      )}
+
+      {/* Historical shift trend chart */}
+      {reports.length >= 2 && (
+        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)"}}>
+          <div style={{fontSize:12,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>{t.weekly_shift_trend}</div>
+          <WeeklyTrendChart reports={reports} t={t}/>
+        </div>
+      )}
     </div>
   );
 }
