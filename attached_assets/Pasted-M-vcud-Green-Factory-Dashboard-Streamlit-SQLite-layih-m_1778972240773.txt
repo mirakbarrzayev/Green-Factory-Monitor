@@ -1,0 +1,51 @@
+Mövcud "Green Factory Dashboard" (Streamlit + SQLite) layihəmin orijinal arxitekturasına, mövcud işlək bölmələrinə, verilənlər bazası bağlantılarına və vizual strukturuna ÇALIŞDIĞIN QƏDƏR TOXUNMADAN, aşağıda qeyd olunan yeni funksiyaları mövcud koda əlavə (extension/modules) olaraq inteqrasiya et və tətbiqi tam işlək vəziyyətə gətir:
+
+1. ORİJİNAL KODUN QORUNMASI QAYDASI
+- Mövcud olan səhifələri, işlək backend məntiqlərini və dizayn elementlərini silmə və ya dəyişdirmə.
+- Yeni funksiyaları ayrı funksiyalar (def), modullar və ya Streamlit-in yeni tab/bölmə elementləri kimi mövcud kodun müvafiq yerlərinə və ya sonuna əlavə kimi oturt.
+
+2. LOGİN SƏHİFƏSİNDƏ MƏRKƏZİ DİL SEÇİMİ VƏ BÜTÜN SAYTIN (A-dan Z-yə) TƏRCÜMƏSİ (CRITICAL RULE)
+- Dil Elementinin Yeri: Dil seçimi elementini (st.selectbox və ya kliklənən dil pəncərəsi/düyməsi formatında) İLK AÇILIŞDA, yəni hələ istifadəçi daxil olmamışdan qabaq Giriş (Login) və Qeydiyyat (Sign Up) səhifəsinin ən yuxarı hissəsinə yerləşdir. Giriş etdikdən sonra da bu seçim st.session_state['lang'] daxilində qorunub saxlanılsın (Default: "🇦🇿 Azərbaycan"). Dil dəyişdiyi an st.rerun() icra olunsun.
+- STRIKT DO-NOT-HARDCODE QAYDASI: Kodun ən yuxarı hissəsində mərkəzi və çox geniş bir "languages = {}" lüğəti yarat. Kodun daxilində tək bir dənə də olsun sərbəst string (hardcoded text) QALMAMALIDIR. Mövcud dillərdən ("🇦🇿 Azərbaycan", "🇬🇧 English", "🇹🇷 Türkçe") hansı seçilirsə, SAYTIN BÜTÜN NÖQTƏLƏRİ dərhal o dilə keçməlidir. Buna mütləq diqqət yetir!
+- Tərcümə Olunacaq Elementlərin Tam Siyahısı:
+  * Login/Register Səhifəsi: "İstifadəçi adı", "Şifrə", "Daxil ol", "Qeydiyyat", "Hesabınız yoxdur?", "Xoş gəlmisiniz" başlıqları və daxiletmə sahələrinin placeholder yazıları.
+  * Naviqasiya və Rollar: Sidebar menyuları, istifadəçinin rol göstəricisi ("Zavod Administratoru", "İstifadəçi").
+  * Əsas Panel Tabları: İcmal, Enerji Sərfiyyatı, Su Sərfiyyatı, Karbon Emissiyası, Nəqliyyat, Qıda Resursları, Karbon Kalk., Həftəlik Hesabatlar, Təhlükəsizlik, Ayarlar.
+  * Qrafiklər (Plotly): Bütün qrafiklərin əsas başlıqları (title) və X-Y oxlarının adları (labels / axis titles).
+  * Metriklər və Düymələr: "Konfiqurasiyanı Yadda Saxla", "Həftəlik Məlumatı Saxla", "PDF Hesabatı Yüklə", "Göndər" düymələri və KPI kartlarının alt yazıları.
+  * Bildirişlər: st.error, st.success və st.warning daxilindəki bütün xəbərdarlıq cümlələri.
+
+3. HƏFTƏLİK RESURS VƏ EMİSSİYA MONITORİNQİ VƏ YADDA SAXILMA SİSTEMİ (NEW)
+- Verilənlər Bazası Arxitekturası: "weekly_resource_reports" adlı yeni bir SQLite cədvəli yarat (id, week_number, year, energy_kwh, water_m3, gas_m3, fuel_liters, co2_emissions, saved_at).
+- Həftəlik Giriş Formu (Data Input): "Həftəlik Hesabatlar" tabında şık bir st.form yaradaraq cari həftə üçün Enerji (kWh), Su (m³), Qaz (m³), Yanacaq (Litr) daxiletmə sahələri qur. Karbon emissiyasını bu resursların sənaye standartı əmsallarına vuraraq avtomatik hesabla və form daxilində canlı göstər.
+- 1 Həftədən Bir Yenilənmə Məntiqi (Automated Reset/Roll): Giriş formasında cari təqvim həftəsi (Məsələn: "Həftə 20, 2026") avtomatik hesablanıb qeyd olunsun. Əgər verilən həftə üzrə bazada artıq məlumat varsa, forma "Bu həftənin məlumatları artıq daxil edilib, növbəti həftə yenidən aktivləşəcək" xəbərdarlığı çıxarsın və məlumatların üzərinə yazmağa (və ya yeniləməyə) Admin icazəsi versin.
+- Tarixi Trend Qrafiki: Daxil edilən və yadda saxlanılan köhnə həftəlik məlumatları bazadan çəkərək alt hissədə xətt qrafiki (Line Chart) ilə həftəbəhəftə resursların dəyişim trendini göstər (Təbii ki, bütün qrafik elementləri və metrik adları seçilən dilə uyğun dinamik olmalıdır).
+
+4. GİZLİ GİRİŞ VƏ QEYDİYYAT MƏHDUDİYYƏTİ (SILENT EMAIL VALIDATION)
+- Giriş (Login) və Qeydiyyat (Sign Up) interfeysində vizual olaraq domen məhdudiyyəti ilə bağlı heç bir yazı GÖRÜNMƏMƏLİDİR.
+- İstifadəçi düyməyə kliklədikdə arxa fonda (backend) e-poçtun sonunun "@gmail.com" ilə bitdiyini yoxlayan bir filter əlavə et. Əgər domen fərqlidirsə, prosesi blokla və ekranda sadəcə lüğətdən gələn bu standart ümumi xəta mesajını göstər: st.error(languages[lang]["auth_error"])
+
+5. ROL ƏSASLI GİRİŞ İDARƏETMƏSİ VƏ XÜSUSİ TAYİNAT (RBAC)
+- Avtomatik Rol Təyini: "users" cədvəlinə "role" sütununu əlavə et (əgər yoxdursa). Qeydiyyat zamanı e-poçt "mirakbarrzayev@gmail.com" olarsa rolu "Admin", qalan bütün "@gmail.com" ünvanlarına isə avtomatik "User" rolu verilsin.
+- Sidebar-a Əlavə və Xüsusi Başlıq: Sidebar-da istifadəçi adının yazıldığı hissəyə toxunmadan, dərhal altına dinamik olaraq rolu əlavə et. Əgər giriş edən hesab "mirakbarrzayev@gmail.com" olarsa, onun rol hissəsində birbaşa "Zavod Administratoru" yazılmalıdır və bu yazı seçilən dilə görə tərcümə olunmalıdır (AZ: "Zavod Administratoru", EN: "Plant Administrator", TR: "Fabrika Yöneticisi"). Digər istifadəçilərdə isə standart "User / İstifadəçi" (və ya dilə uyğun qarşılığı) yazılmalıdır.
+- Hədd Konfiqurasiyası (Threshold) Şərtləndirilməsi: "Təhlükəsizlik" səhifəsindəki/tabındakı mövcud limit slayderlərinin funksionallığına bu şərti əlavə et:
+  * "User" daxil olduqda slayderlər dondurulmuş (disabled=True) olsun və bu xəbərdarlıq qutusu çıxsın: "Threshold değiştirme yetkisi yalnızca Admin hesabına aittir." (Bu mətn də lüğətə bağlansın).
+  * "Admin" olduqda slayderlər aktiv (disabled=False) olsun və altında dəyişiklikləri SQLite bazasına parametrized query ilə yazan "Konfiqurasiyanı Yadda Saxla" düyməsi görünür olsun.
+
+6. SƏNAYE ANALİTİKASI (ƏLAVƏ BÖLMƏLƏR / TAB-LAR)
+Mövcud dashboard panellərini silmədən, altlarına və ya müvafiq yeni tab olaraq bu analitik qrafikləri əlavə et:
+- Shift-based Analiz: Saat aralıqlarına görə (Səhər: 08:00-16:00, Günorta: 16:00-00:00, Gecə: 00:00-08:00) enerji xərclərini vizuallaşdıran dinamik Plotly qrafikləri (Mətnlər və oxlar seçilən dil lüğətinə görə dəyişməlidir).
+- Məhsuldarlıq / Enerji Nisbəti (SEC): 1 vahid məhsul istehsalı üçün xərclənən xüsusi enerji miqdarını (Xərclənən Enerji / Məhsul Sayı) hesablaya bilən yeni bir KPI kartı və zaman trendi qrafiki (Lüğətə bağlı şəkildə).
+
+7. PDF HESABAT GENERATORU VƏ ƏLAQƏ SİSTEMİ
+- PDF Düyməsi: Mövcud hesabatlar bölməsinə toxunmadan, sadəcə alt hissəyə rəhbərlik üçün A4 formatında, seçilən dilə uyğun tərtib edilən analitik PDF hesabatını yükləyən st.download_button düyməsi əlavə et.
+- Əlaqə & Dəstək Paneli (Yeni Bölmə): Sistemə əlavə olaraq şık bir dəstək kartı və st.form inteqrasiya et:
+  * Sabit İletişim Məlumatları: E-poçt: mirakbarrzayev@gmail.com | Telefon: +994515881250 (Dilə görə tərcümə olunsun).
+  * Tiket Formu: Ad-Soyad, Mövzu, Mesaj və Təcililik səviyyəsi qeyd edilərək göndərilən mesajları "support_tickets" cədvəlinə yazsın.
+
+8. TƏHLÜKƏSİZLİK VƏ DIZAYN
+- Bütün yeni SQL sorğuları tamamilə parametrize edilmiş (?, ?, ?) şəkildə yazılsın və mövcud SQL Injection detektoruna bağlansın.
+- Dizayn Industrial Dark-Green üslubuna tam uyğunlaşdırılsın (Yaradırılan yeni qrafiklər və elementlər tünd yaşıl tonlarda olmalıdır).
+- Yeni əlavə edilən kod blokları əsas sistemin çökməməsi üçün try-except blokları ilə qorunsun.
+
+Kodu tam hazır və nöqtə-bə-nöqtə inteqrasiya edilmiş şəkildə yenilə və işə sal.
