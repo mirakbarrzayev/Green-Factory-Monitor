@@ -3413,7 +3413,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
               </div>
             </div>
             {/* Weekly Shift Entry + Historical Trend */}
-            <EnergyShiftPanel isAdmin={isAdmin} t={t}/>
+            <EnergyShiftPanel isAdmin={!!user.isAdmin} t={t}/>
           </div>
         )}
 
