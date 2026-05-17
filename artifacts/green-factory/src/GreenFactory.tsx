@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 
 // ─── LANGUAGE DICTIONARY ──────────────────────────────────────────────────────
 const LANGUAGES = {
