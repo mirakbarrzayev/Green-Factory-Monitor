@@ -245,6 +245,7 @@ const LANGUAGES = {
     ticket_sent: "✅ Mesajınız göndərildi!",
     ticket_history: "Göndərilmiş Talеblər",
     ticket_empty: "Hələ göndərilmiş taleb yoxdur.",
+    ticket_delete: "Sil",
     // pw strength
     pw_weak: "Zəif",
     pw_medium: "Orta",
@@ -492,6 +493,7 @@ const LANGUAGES = {
     ticket_sent: "✅ Your message has been sent!",
     ticket_history: "Submitted Tickets",
     ticket_empty: "No tickets submitted yet.",
+    ticket_delete: "Delete",
     pw_weak: "Weak",
     pw_medium: "Medium",
     pw_strong: "Strong",
@@ -736,6 +738,7 @@ const LANGUAGES = {
     ticket_sent: "✅ Mesajınız gönderildi!",
     ticket_history: "Gönderilen Talepler",
     ticket_empty: "Henüz gönderilmiş talep yok.",
+    ticket_delete: "Sil",
     pw_weak: "Zayıf",
     pw_medium: "Orta",
     pw_strong: "Güçlü",
@@ -2105,10 +2108,16 @@ function AuthScreen({ onLogin, lang, setLang }: { onLogin: (u: User) => void; la
     <div className="onboard-wrap">
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {/* Language Selector */}
-      <div className="lang-selector-wrap">
-        <select className="lang-select" value={lang} onChange={e => setLang(e.target.value as LangKey)}>
-          {(Object.keys(LANGUAGES) as LangKey[]).map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
+      <div className="lang-selector-wrap" style={{display:"flex",gap:6}}>
+        {(Object.keys(LANGUAGES) as LangKey[]).map(k => (
+          <button key={k} onClick={() => setLang(k)} style={{
+            padding:"6px 14px", borderRadius:8, border:"1px solid", fontWeight:700, fontSize:13, cursor:"pointer",
+            borderColor: lang === k ? "var(--green)" : "rgba(255,255,255,0.15)",
+            background: lang === k ? "rgba(0,232,122,0.15)" : "rgba(255,255,255,0.06)",
+            color: lang === k ? "var(--green)" : "rgba(255,255,255,0.55)",
+            transition:"all 0.15s",
+          }}>{LANG_SHORT[k]}</button>
+        ))}
       </div>
 
       <div className="onboard-left">
@@ -2812,11 +2821,17 @@ function WeeklyReportsPage({ isAdmin, t }: { isAdmin: boolean; t: T }) {
 }
 
 // ─── SUPPORT PAGE ─────────────────────────────────────────────────────────────
-function SupportPage({ t }: { t: T }) {
+function SupportPage({ t, isAdmin }: { t: T; isAdmin?: boolean }) {
   const [tickets, setTickets] = useState<SupportTicket[]>(() => loadSupportTickets());
   const [form, setForm] = useState({ name: "", subject: "", message: "", urgency: "medium" });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{msg:string;type:"error"|"success"}|null>(null);
+
+  const handleDelete = (id: string) => {
+    const updated = tickets.filter(tk => tk.id !== id);
+    setTickets(updated);
+    saveSupportTickets(updated);
+  };
 
   const handleSend = () => {
     if (!form.name.trim() || !form.subject.trim() || !form.message.trim()) return;
@@ -2910,13 +2925,20 @@ function SupportPage({ t }: { t: T }) {
           ) : (
             <div>
               {tickets.map(tick => (
-                <div key={tick.id} className="ticket-row">
+                <div key={tick.id} className="ticket-row" style={{alignItems:"flex-start"}}>
                   <div className={`ticket-urgency-badge ${urgencyClass[tick.urgency] || "urg-medium"}`}>{urgencyLabel[tick.urgency] || tick.urgency}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div className="ticket-subject">{tick.subject}</div>
                     <div className="ticket-meta">{tick.name} · {tick.sent_at}</div>
                     <div className="ticket-msg">{tick.message.slice(0,100)}{tick.message.length > 100 ? "…" : ""}</div>
                   </div>
+                  {isAdmin && (
+                    <button onClick={() => handleDelete(tick.id)} title={t.ticket_delete} style={{
+                      background:"rgba(255,80,80,0.12)", border:"1px solid rgba(255,80,80,0.3)",
+                      color:"#ff6b6b", borderRadius:6, padding:"4px 10px", fontSize:12,
+                      cursor:"pointer", fontWeight:600, flexShrink:0, marginTop:2,
+                    }}>{t.ticket_delete}</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -3282,7 +3304,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
         {activePage === "carbon" && <CarbonCalculator sensor={sensor} t={t}/>}
         {activePage === "settings" && <SettingsPage user={user} theme={theme} setTheme={setTheme} t={t} lang={lang} setLang={setLang}/>}
         {activePage === "weekly" && <WeeklyReportsPage isAdmin={!!user.isAdmin} t={t}/>}
-        {activePage === "support" && <SupportPage t={t}/>}
+        {activePage === "support" && <SupportPage t={t} isAdmin={!!user.isAdmin}/>}
 
         {activePage === "overview" && (
           <div className="gf-page">
