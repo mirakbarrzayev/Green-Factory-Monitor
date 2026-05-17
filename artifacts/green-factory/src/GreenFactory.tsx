@@ -1313,6 +1313,7 @@ const gfStyles = `
   .sidebar {
     background: var(--bg2); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; padding: 28px 0; position: sticky; top: 0; height: 100vh;
+    overflow: hidden;
   }
   .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 24px 32px; }
   .sidebar-logo-icon {
@@ -1322,11 +1323,11 @@ const gfStyles = `
   }
   .sidebar-logo span { font-family: var(--font-head); font-size: 16px; font-weight: 800; color: var(--text); }
   .sidebar-logo span em { color: var(--green); font-style: normal; }
-  .nav-section { padding: 0 12px; flex: 1; overflow-y: auto; scroll-behavior: smooth !important; overflow-anchor: auto !important; }
-  .nav-section::-webkit-scrollbar { width: 4px; }
+  .nav-section { padding: 0 12px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; overflow-anchor: auto; }
+  .nav-section::-webkit-scrollbar { width: 3px; }
   .nav-section::-webkit-scrollbar-track { background: transparent; }
-  .nav-section::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-  .nav-section::-webkit-scrollbar-thumb:hover { background: var(--green); }
+  .nav-section::-webkit-scrollbar-thumb { background: #1E5631; border-radius: 3px; }
+  .nav-section::-webkit-scrollbar-thumb:hover { background: #4C9A2A; }
   .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 20px; }
   .nav-item {
     display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px;
