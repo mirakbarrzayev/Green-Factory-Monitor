@@ -755,6 +755,11 @@ const LANGUAGES = {
 
 type LangKey = keyof typeof LANGUAGES;
 type T = (typeof LANGUAGES)["🇦🇿 Azərbaycan"];
+const LANG_SHORT: Record<LangKey, string> = {
+  "🇦🇿 Azərbaycan": "AZ",
+  "🇬🇧 English": "EN",
+  "🇹🇷 Türkçe": "TR",
+};
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const generateSensorData = () => ({
@@ -2380,7 +2385,7 @@ function FoodPage({ t }: { t: T }) {
 }
 
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ user, theme, setTheme, t }: { user: User; theme: string; setTheme: (t: string) => void; t: T }) {
+function SettingsPage({ user, theme, setTheme, t, lang, setLang }: { user: User; theme: string; setTheme: (t: string) => void; t: T; lang: LangKey; setLang: (l: LangKey) => void }) {
   const [notifs, setNotifs] = useState({ energyLimit: true, co2Alert: true, weeklyReport: false, waterLimit: true });
   const [pwForm, setPwForm] = useState({ old: "", new1: "", new2: "" });
   const [pwShow, setPwShow] = useState({ old: false, new1: false, new2: false });
@@ -2418,6 +2423,24 @@ function SettingsPage({ user, theme, setTheme, t }: { user: User; theme: string;
     <div className="gf-page">
       {pwToast && <Toast msg={pwToast.msg} type={pwToast.type} onClose={() => setPwToast(null)} />}
       <div className="dash-header"><div className="dash-title">{t.page_settings.split(" & ")[0]} <span>& {t.page_settings.split(" & ")[1]}</span></div></div>
+
+      {/* Language selector */}
+      <div className="settings-section">
+        <div className="settings-title"><IconSettings/> {t.lang_label || "Dil / Language"}</div>
+        <div className="settings-card">
+          <div style={{display:"flex",gap:8}}>
+            {(Object.keys(LANGUAGES) as LangKey[]).map(k => (
+              <button key={k} onClick={() => setLang(k)} style={{
+                padding:"8px 20px", borderRadius:8, border:"1px solid", fontWeight:700, fontSize:14, cursor:"pointer",
+                borderColor: lang === k ? "var(--green)" : "var(--border)",
+                background: lang === k ? "rgba(0,232,122,0.12)" : "var(--card2)",
+                color: lang === k ? "var(--green)" : "var(--text2)",
+                transition:"all 0.15s",
+              }}>{LANG_SHORT[k]}</button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <div className="settings-section">
         <div className="settings-title"><IconUser/> {t.profile}</div>
@@ -3088,6 +3111,11 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
   const [activeAlerts, setActiveAlerts] = useState<AlertEvent[]>([]);
   const [prodCount] = useState(() => Math.floor(120 + Math.random() * 80));
   const sentRef = useRef<Map<string, number>>(new Map());
+  const navRef = useRef<HTMLDivElement>(null);
+  const navScrollRef = useRef(0);
+  useLayoutEffect(() => {
+    if (navRef.current) navRef.current.scrollTop = navScrollRef.current;
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -3167,7 +3195,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
 
   const sections = [...new Set(navItems.map(n => n.section))];
 
-  const NavContent = () => (
+  const mobileNavContent = (
     <div className="nav-section">
       {sections.map(section => (
         <div key={section}>
@@ -3182,14 +3210,24 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
       ))}
     </div>
   );
+  const desktopNavContent = (
+    <div className="nav-section" ref={navRef}>
+      {sections.map(section => (
+        <div key={section}>
+          <div className="nav-label">{section}</div>
+          {navItems.filter(n => n.section === section).map(item => (
+            <div key={item.id} data-testid={`nav-${item.id}`} className={`nav-item ${activePage === item.id ? "active" : ""}`}
+              onClick={() => { navScrollRef.current = navRef.current?.scrollTop ?? 0; setActivePage(item.id); }}>
+              <span className="nav-icon">{item.icon}</span>{item.label}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 
   const UserCard = () => (
     <div className="sidebar-bottom" style={{paddingBottom:8}}>
-      <div style={{padding:"0 12px 8px",display:"flex",alignItems:"center",gap:8}}>
-        <select className="lang-select" style={{flex:1,fontSize:12}} value={lang} onChange={e => setLang(e.target.value as LangKey)}>
-          {(Object.keys(LANGUAGES) as LangKey[]).map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
-      </div>
       <div style={{padding:"0 12px"}}>
         <div className="user-card">
           <div className="user-avatar">{initials}</div>
@@ -3209,7 +3247,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
       <div className={`mobile-drawer ${mobileMenuOpen ? "open" : ""}`}>
         <button className="mobile-drawer-close" onClick={() => setMobileMenuOpen(false)}><IconX/></button>
         <div className="sidebar-logo"><div className="sidebar-logo-icon"><IconLeaf/></div><span>Green<em>Factory</em></span></div>
-        <NavContent/>
+        {mobileNavContent}
         <div className="sidebar-bottom" style={{padding:"8px 12px"}}>
           <div className="user-card">
             <div className="user-avatar">{initials}</div>
@@ -3221,7 +3259,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
 
       <aside className="sidebar">
         <div className="sidebar-logo"><div className="sidebar-logo-icon"><IconLeaf/></div><span>Green<em>Factory</em></span></div>
-        <NavContent/>
+        {desktopNavContent}
         <UserCard/>
       </aside>
 
@@ -3242,7 +3280,7 @@ function Dashboard({ user, onLogout, theme, setTheme, lang, setLang }: {
         {activePage === "transport" && <TransportPage history={history} t={t}/>}
         {activePage === "food" && <FoodPage t={t}/>}
         {activePage === "carbon" && <CarbonCalculator sensor={sensor} t={t}/>}
-        {activePage === "settings" && <SettingsPage user={user} theme={theme} setTheme={setTheme} t={t}/>}
+        {activePage === "settings" && <SettingsPage user={user} theme={theme} setTheme={setTheme} t={t} lang={lang} setLang={setLang}/>}
         {activePage === "weekly" && <WeeklyReportsPage isAdmin={!!user.isAdmin} t={t}/>}
         {activePage === "support" && <SupportPage t={t}/>}
 
